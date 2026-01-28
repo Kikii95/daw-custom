@@ -16,6 +16,13 @@ void AudioTrack::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
     tempBuffer.setSize(2, samplesPerBlockExpected);
 
+    // Prepare effect chain
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlockExpected);
+    spec.numChannels = 2;
+    effectChain.prepare(spec);
+
     juce::ScopedLock sl(clipLock);
     for (auto& clip : clips)
         clip->prepareToPlay(samplesPerBlockExpected, sampleRate);
@@ -23,6 +30,8 @@ void AudioTrack::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
 void AudioTrack::releaseResources()
 {
+    effectChain.reset();
+
     juce::ScopedLock sl(clipLock);
     for (auto& clip : clips)
         clip->releaseResources();
@@ -80,6 +89,10 @@ void AudioTrack::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToF
             clip->getNextAudioBlock(clipInfo);
         }
     }
+
+    // Process through effect chain (before volume/pan)
+    if (effectChain.getNumEffects() > 0 && !effectChain.isBypassed())
+        effectChain.process(tempBuffer);
 
     // Apply volume
     float vol = volume.load();

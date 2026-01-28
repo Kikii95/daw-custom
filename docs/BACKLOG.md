@@ -16,14 +16,19 @@
 
 ## 🎛️ Phase 2 : Effects (EN COURS)
 
-- [ ] Architecture effect chain (EffectBase, EffectChain)
-- [ ] GainProcessor (volume/pan)
-- [ ] EQ paramétrique (4 bandes)
-- [ ] Compressor
-- [ ] Reverb
-- [ ] Delay (port du legacy XAudio2)
-- [ ] Effect bypass/wet-dry
-- [ ] Effect rack UI
+### Sprint 6 — Architecture + Effets Core ✅
+- [x] Architecture effect chain (EffectSlot, EffectChain)
+- [x] GainEffect (volume + constant power pan)
+- [x] EQ paramétrique (3 bandes: Low/Mid/High)
+- [x] Compressor (threshold, ratio, attack, release, makeup)
+- [x] Reverb (Freeverb wrapper)
+- [x] Delay (port legacy XAudio2 avec smoothing)
+- [x] Effect bypass support
+- [x] Intégration AudioTrack
+
+### Sprint 7 — UI (À FAIRE)
+- [ ] Effect rack UI panel
+- [ ] Effect slot component (knobs, bypass)
 
 ## 🎹 Phase 3 : Sound Design
 

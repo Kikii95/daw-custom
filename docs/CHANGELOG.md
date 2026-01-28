@@ -53,7 +53,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Phase 2 Sprint 6 (Effects Core)
+
+**DSP Architecture**
+- EffectSlot: Base class for all effects (ProcessorBase interface)
+- EffectChain: Container managing multiple effects in series
+- Per-track effect chain integration in AudioTrack
+
+**Effects**
+- GainEffect: Volume control + constant power stereo panning
+- ParametricEQ: 3-band EQ (Low Shelf, Mid Peak, High Shelf)
+- CompressorEffect: Dynamics processor (threshold, ratio, attack, release, makeup)
+- ReverbEffect: Freeverb wrapper with room presets (Small Room, Large Hall, Plate)
+- DelayEffect: Stereo delay with feedback, ported from legacy XAudio2 code
+
 ### Planned
-- Phase 2: Effects (EQ, Compressor, Reverb, Delay)
+- Phase 2 Sprint 7: Effects UI (EffectRackPanel)
 - Phase 3: Sound Design (Kick designer, Synth)
 - Phase 4: VST3 support

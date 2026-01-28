@@ -43,6 +43,14 @@ target_sources(DAWCustom
         Source/Audio/FileIO/AudioFileLoader.cpp
         Source/Audio/FileIO/AudioFileExporter.cpp
 
+        # Audio DSP
+        Source/Audio/DSP/EffectChain.cpp
+        Source/Audio/DSP/Effects/GainEffect.cpp
+        Source/Audio/DSP/Effects/ParametricEQ.cpp
+        Source/Audio/DSP/Effects/CompressorEffect.cpp
+        Source/Audio/DSP/Effects/ReverbEffect.cpp
+        Source/Audio/DSP/Effects/DelayEffect.cpp
+
         # UI - Main
         Source/UI/MainLayout.cpp
 

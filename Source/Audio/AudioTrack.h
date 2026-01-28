@@ -2,6 +2,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "AudioClip.h"
+#include "DSP/EffectChain.h"
 #include "Model/Track.h"
 #include <vector>
 #include <memory>
@@ -47,11 +48,16 @@ public:
     const Track& getTrackData() const { return trackData; }
     const juce::Uuid& getId() const { return trackData.id; }
 
+    // Effect chain access
+    EffectChain& getEffectChain() { return effectChain; }
+    const EffectChain& getEffectChain() const { return effectChain; }
+
 private:
     void applyPanning(juce::AudioBuffer<float>& buffer, float panValue);
 
     std::vector<std::unique_ptr<AudioClip>> clips;
     Track trackData;
+    EffectChain effectChain;
 
     std::atomic<float> volume { 1.0f };
     std::atomic<float> pan { 0.0f };
