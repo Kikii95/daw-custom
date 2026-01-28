@@ -1,0 +1,88 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAWCustom-Windows
+          path: build/DAWCustom_artefacts/Release/
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libx11-dev libxcomposite-dev \
+            libxcursor-dev libxext-dev libxinerama-dev \
+            libxrandr-dev libxrender-dev
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAWCustom-Linux
+          path: build/DAWCustom_artefacts/Release/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DAWCustom-Windows
+          path: windows-build
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DAWCustom-Linux
+          path: linux-build
+
+      - name: Create zip files
+        run: |
+          cd windows-build && zip -r ../DAWCustom-Windows.zip . && cd ..
+          cd linux-build && zip -r ../DAWCustom-Linux.zip . && cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            DAWCustom-Windows.zip
+            DAWCustom-Linux.zip
+          generate_release_notes: true

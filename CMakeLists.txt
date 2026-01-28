@@ -28,8 +28,50 @@ juce_add_gui_app(DAWCustom
 # Sources
 target_sources(DAWCustom
     PRIVATE
+        # Main
         Source/Main.cpp
         Source/MainComponent.cpp
+
+        # Audio Core
+        Source/Audio/AudioEngine.cpp
+        Source/Audio/TransportController.cpp
+        Source/Audio/AudioClip.cpp
+        Source/Audio/AudioTrack.cpp
+        Source/Audio/AudioMixer.cpp
+
+        # Audio FileIO
+        Source/Audio/FileIO/AudioFileLoader.cpp
+        Source/Audio/FileIO/AudioFileExporter.cpp
+
+        # UI - Main
+        Source/UI/MainLayout.cpp
+
+        # UI - Transport
+        Source/UI/Transport/TransportBar.cpp
+
+        # UI - Waveform
+        Source/UI/Waveform/WaveformCache.cpp
+        Source/UI/Waveform/WaveformDisplay.cpp
+
+        # UI - Timeline
+        Source/UI/Timeline/TimelineRuler.cpp
+        Source/UI/Timeline/ClipComponent.cpp
+        Source/UI/Timeline/TrackLane.cpp
+        Source/UI/Timeline/TimelinePanel.cpp
+
+        # UI - Mixer
+        Source/UI/Mixer/MeterComponent.cpp
+        Source/UI/Mixer/ChannelStrip.cpp
+        Source/UI/Mixer/MixerPanel.cpp
+
+        # Utils
+        Source/Utils/Tweens.cpp
+)
+
+# Include directories for our headers
+target_include_directories(DAWCustom
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source
 )
 
 # JUCE modules

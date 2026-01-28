@@ -6,52 +6,60 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 
 ---
 
-## Q1 2026 — Foundation
+## Q1 2026 — Foundation ✅
 
-### Janvier-Février
+### Janvier (FAIT)
 - [x] Choix stack (JUCE GPL)
-- [ ] Setup projet JUCE + CMake
-- [ ] Audio I/O basique
-- [ ] Première fenêtre GUI
+- [x] ADR-001 documenté
+- [x] Setup projet JUCE + CMake
+- [x] Audio I/O (AudioEngine + AudioDeviceManager)
+- [x] Première fenêtre GUI (MainLayout)
+- [x] Import audio multi-formats (WAV, MP3, FLAC)
+- [x] Timeline avec waveforms
+- [x] Transport controls (play/pause/stop)
+- [x] Mixer multi-pistes (volume, pan, mute/solo)
+- [x] VU-mètres (MeterComponent)
+- [x] Export audio (WAV, FLAC)
+- [x] **Phase 1 MVP TERMINÉE**
 
-### Mars
-- [ ] Import/export audio
-- [ ] Timeline basique
-- [ ] Waveform visualization
+### Février-Mars
+- [ ] Phase 2 : Effects (EQ, Compressor, Reverb, Delay)
+- [ ] Effect chain architecture
+- [ ] Effect rack UI
 
 ---
 
-## Q2 2026 — Core Features
+## Q2 2026 — Sound Design
 
 ### Avril
-- [ ] Mixer multi-pistes
-- [ ] Transport controls
-- [ ] Basic effects (EQ, Compressor)
+- [ ] Phase 3 : Sound Design
+- [ ] Kick designer
+- [ ] Basic synth (oscillateurs, ADSR)
 
 ### Mai-Juin
-- [ ] Effect chain architecture
-- [ ] Reverb, Delay
 - [ ] VST3 hosting basique
+- [ ] Plugin scanner
+- [ ] Preset system
 
 ---
 
-## Q3 2026 — Sound Design
+## Q3 2026 — Polish
 
 ### Juillet-Août
-- [ ] Kick designer
-- [ ] Basic synth
-- [ ] Sample layering
+- [ ] UI polish & themes
+- [ ] Project save/load
+- [ ] Undo/redo
 
 ### Septembre
-- [ ] UI polish
-- [ ] Preset system
-- [ ] Beta release
+- [ ] Beta release v1.0
+- [ ] Documentation utilisateur
 
 ---
 
 ## Future
 
-- Piano roll
+- Piano roll / MIDI editor
 - MIDI support complet
-- Automation
+- Automation lanes
 - Mastering tools
+- Spectrum analyzer

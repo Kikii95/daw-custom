@@ -1,4 +1,4 @@
-#include <JuceHeader.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "MainComponent.h"
 
 class DAWCustomApplication : public juce::JUCEApplication
