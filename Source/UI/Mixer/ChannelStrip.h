@@ -25,8 +25,16 @@ public:
     std::function<void(juce::Uuid, float)> onPanChanged;
     std::function<void(juce::Uuid, bool)> onMuteChanged;
     std::function<void(juce::Uuid, bool)> onSoloChanged;
+    std::function<void(juce::Uuid)> onSelected;
+
+    // Selection state
+    void setSelected(bool shouldBeSelected);
+    bool isSelected() const { return selected; }
+
+    void mouseDown(const juce::MouseEvent& e) override;
 
 private:
+    bool selected = false;
     juce::Uuid trackId;
     juce::String trackName;
     juce::Colour trackColour;

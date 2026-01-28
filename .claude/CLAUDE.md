@@ -69,12 +69,16 @@ cmake --build build
 
 ---
 
-## 🎹 Features MVP
+## 🎹 Features MVP — État Actuel
 
-1. **Mixer** : Import audio, timeline, volume/pan
-2. **Effects** : EQ, Compressor, Reverb, Delay
-3. **Sound Design** : Kick designer, synth basique
-4. **VST** : Charger plugins gratuits (Vital, Surge)
+| Phase | Feature | Status |
+|-------|---------|--------|
+| **Phase 1** | Mixer (timeline, volume/pan, import/export) | ✅ v0.1.0 |
+| **Phase 2** | Effects (EQ, Compressor, Reverb, Delay) | ✅ Sprint 6-7 |
+| **Phase 3** | Sound Design (Kick, Synth, Filter) | ✅ Sprint 8-10 |
+| **Phase 4** | VST3 Support (scan, load, UI) | ✅ Sprint 11-12 |
+
+**MVP TERMINÉ** — Prochaines phases : Preset system, Project save/load
 
 ---
 

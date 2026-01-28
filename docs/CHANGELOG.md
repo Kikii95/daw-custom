@@ -67,7 +67,66 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - ReverbEffect: Freeverb wrapper with room presets (Small Room, Large Hall, Plate)
 - DelayEffect: Stereo delay with feedback, ported from legacy XAudio2 code
 
+**UI - Effects (Sprint 7)**
+- EffectSlotComponent: Dynamic parameter controls (knobs), bypass toggle, remove button
+- EffectRackPanel: Container with effect type combo, add/remove effects, scrollable list
+- Track selection in MixerPanel with visual feedback
+- Integration with MainComponent layout
+
+**Synthesis - Sprint 8 (Phase 3)**
+- Oscillators.h: Waveform generation helpers (sine, square, sawtooth, triangle, noise)
+- OscillatorEffect: Standalone oscillator with frequency, waveform type, level params
+- EnvelopeEffect: ADSR envelope with trigger/release, auto-trigger mode
+- Integration with EffectRackPanel (Oscillator + Envelope in combo menu)
+
+**Kick Designer - Sprint 9 (Phase 3)**
+- KickDesigner: 808-style kick drum synthesizer
+  - Sine oscillator with pitch envelope (exponential decay)
+  - Noise layer with separate decay for attack transient
+  - Click component for punch
+  - Saturation (soft clipping via tanh)
+  - 9 parameters: Freq, Pitch, P.Decay, Decay, Noise, N.Decay, Drive, Click, Level
+
+**Basic Synth + Filter - Sprint 10 (Phase 3)**
+- SimpleFilter: Resonant LP/HP/BP filter using StateVariableTPTFilter
+  - Cutoff, Resonance, Mode, EnvAmount parameters
+  - Envelope modulation input for external control
+- BasicSynth: Subtractive synthesizer
+  - Dual oscillators with detune (5 waveforms)
+  - Resonant lowpass filter with envelope modulation
+  - Full ADSR amplitude envelope
+  - 12 parameters: Freq, Wave, Detune, Osc2, Cutoff, Reso, FltEnv, Atk, Dec, Sus, Rel, Level
+
+**Plugin Infrastructure - Sprint 11 (Phase 4)**
+- PluginManager: Singleton for VST3 plugin discovery and management
+  - Background async scanning with progress callback
+  - Platform-specific search paths (Linux, macOS, Windows)
+  - Plugin list caching (XML persistence)
+  - Deadman's pedal for crash detection during scanning
+  - Async plugin instantiation (required for stability)
+- VST3EffectSlot: Wrapper adapting AudioPluginInstance to EffectSlot interface
+  - Maps plugin parameters to EffectSlot interface
+  - Support for plugin editor (UI)
+  - State save/load for presets
+  - Latency reporting for host compensation
+
+**Plugin UI - Sprint 12 (Phase 4)**
+- PluginEditorWindow: DocumentWindow hosting native VST3 plugin UIs
+  - Window management (open, close, bring to front)
+  - Automatic cleanup on effect removal
+  - Static factory methods for window tracking
+- GenericPluginEditor: Fallback parameter grid for plugins without native UI
+  - Dynamic grid of rotary sliders
+  - Timer-based parameter polling
+  - Automatic layout based on parameter count
+- EffectRackPanel VST3 integration:
+  - "Scan" button for background VST3 scanning
+  - VST3 plugins section in effect combo menu
+  - Async plugin loading with progress feedback
+- MainComponent integration:
+  - PluginManager initialization at startup
+  - Plugin window cleanup on shutdown
+
 ### Planned
-- Phase 2 Sprint 7: Effects UI (EffectRackPanel)
-- Phase 3: Sound Design (Kick designer, Synth)
-- Phase 4: VST3 support
+- Phase 4 complete ✅
+- Next: Preset system, Project save/load

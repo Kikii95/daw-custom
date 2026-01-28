@@ -1,7 +1,12 @@
 #include "MainComponent.h"
+#include "Audio/Plugins/PluginManager.h"
+#include "UI/Plugins/PluginEditorWindow.h"
 
 MainComponent::MainComponent()
 {
+    // Initialize plugin manager (singleton)
+    PluginManager::getInstance().initialize();
+
     // Create project and mixer
     project = std::make_unique<Project>();
     mixer = std::make_unique<AudioMixer>();
@@ -32,6 +37,9 @@ MainComponent::MainComponent()
     mixerPanel.setAudioMixer(mixer.get());
     addAndMakeVisible(mixerPanel);
 
+    // Set up effect rack panel
+    addAndMakeVisible(effectRackPanel);
+
     // Connect callbacks
     connectCallbacks();
 
@@ -46,6 +54,9 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
+    // Close all plugin editor windows
+    PluginEditorWindow::closeAllWindows();
+
     audioEngine.clearSource();
     audioEngine.shutdown();
 }
@@ -66,6 +77,10 @@ void MainComponent::resized()
     auto transportHeight = 60;
     auto transportArea = bounds.removeFromTop(transportHeight);
     mainLayout.getTransportBar().setBounds(transportArea);
+
+    // Effect rack on right
+    auto effectRackWidth = 250;
+    effectRackPanel.setBounds(bounds.removeFromRight(effectRackWidth));
 
     // Mixer at bottom
     auto mixerHeight = 200;
@@ -369,6 +384,25 @@ void MainComponent::connectCallbacks()
         mixer->setMasterVolume(volume);
         project->setMasterVolume(volume);
     };
+
+    mixerPanel.onTrackSelected = [this](juce::Uuid trackId)
+    {
+        if (auto* audioTrack = getAudioTrackById(trackId))
+            effectRackPanel.setTrack(audioTrack);
+    };
+}
+
+AudioTrack* MainComponent::getAudioTrackById(const juce::Uuid& id)
+{
+    for (int i = 0; i < mixer->getNumTracks(); ++i)
+    {
+        if (auto* audioTrack = mixer->getTrack(i))
+        {
+            if (audioTrack->getId() == id)
+                return audioTrack;
+        }
+    }
+    return nullptr;
 }
 
 void MainComponent::updateTitle()

@@ -14,7 +14,7 @@
 - [x] VU-mètres (dB scale)
 - [x] Menu bar
 
-## 🎛️ Phase 2 : Effects (EN COURS)
+## 🎛️ Phase 2 : Effects ✅
 
 ### Sprint 6 — Architecture + Effets Core ✅
 - [x] Architecture effect chain (EffectSlot, EffectChain)
@@ -26,24 +26,45 @@
 - [x] Effect bypass support
 - [x] Intégration AudioTrack
 
-### Sprint 7 — UI (À FAIRE)
-- [ ] Effect rack UI panel
-- [ ] Effect slot component (knobs, bypass)
+### Sprint 7 — UI ✅
+- [x] Effect rack UI panel (EffectRackPanel)
+- [x] Effect slot component (EffectSlotComponent: knobs, bypass, remove)
+- [x] Track selection in MixerPanel
+- [x] Integration MainComponent
 
-## 🎹 Phase 3 : Sound Design
+## 🎹 Phase 3 : Sound Design ✅
 
-- [ ] Kick designer (sine + noise + envelope)
-- [ ] Basic synth (oscillateurs, filtres, ADSR)
+### Sprint 8 — Core Synthesis ✅
+- [x] Oscillators.h (waveform helpers: sine, square, saw, triangle, noise)
+- [x] OscillatorEffect (frequency, waveform type, level)
+- [x] EnvelopeEffect (ADSR with trigger/release, auto-trigger)
+- [x] EffectRackPanel integration (combo menu)
+
+### Sprint 9 — Kick Designer ✅
+- [x] KickDesigner (sine + pitch envelope + noise + saturation)
+- [ ] One-shot export (future)
+
+### Sprint 10 — Basic Synth ✅
+- [x] BasicSynth (Dual Osc + ADSR + Filter)
+- [x] SimpleFilter (LP/HP/BP with resonance)
+
+### Future
 - [ ] Sample layering
-- [ ] One-shot export
 - [ ] Preset system
 
 ## 🔌 Phase 4 : VST Support
 
-- [ ] VST3 plugin scanner
-- [ ] VST plugin hosting
-- [ ] Plugin parameter automation
-- [ ] Preset management
+### Sprint 11 — Core Infrastructure ✅
+- [x] PluginManager singleton (scan, cache, async creation)
+- [x] VST3EffectSlot wrapper (AudioPluginInstance → EffectSlot)
+- [x] Platform-specific search paths
+- [x] Deadman's pedal crash detection
+
+### Sprint 12 — UI Integration ✅
+- [x] PluginEditorWindow (native plugin UI hosting)
+- [x] GenericPluginEditor (fallback parameter grid)
+- [x] EffectRackPanel VST3 combo integration
+- [x] MainComponent PluginManager initialization
 
 ---
 

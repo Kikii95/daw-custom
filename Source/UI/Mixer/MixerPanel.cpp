@@ -131,6 +131,11 @@ void MixerPanel::refreshChannels()
                 onTrackSoloChanged(id, solo);
         };
 
+        strip->onSelected = [this](juce::Uuid id)
+        {
+            selectTrack(id);
+        };
+
         stripContainer.addAndMakeVisible(*strip);
         channelStrips.push_back(std::move(strip));
     }
@@ -149,4 +154,17 @@ void MixerPanel::timerCallback()
     // Update individual track meters (simplified - would need per-track levels)
     // For now, just showing master levels scaled per track
     // Real implementation would get levels from each AudioTrack
+}
+
+void MixerPanel::selectTrack(const juce::Uuid& trackId)
+{
+    selectedTrackId = trackId;
+
+    // Update visual state
+    for (auto& strip : channelStrips)
+        strip->setSelected(strip->getTrackId() == trackId);
+
+    // Notify callback
+    if (onTrackSelected)
+        onTrackSelected(trackId);
 }

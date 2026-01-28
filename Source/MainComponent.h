@@ -10,6 +10,7 @@
 #include "UI/MainLayout.h"
 #include "UI/Timeline/TimelinePanel.h"
 #include "UI/Mixer/MixerPanel.h"
+#include "UI/Effects/EffectRackPanel.h"
 #include <memory>
 
 class MainComponent : public juce::Component,
@@ -59,6 +60,10 @@ private:
     MainLayout mainLayout;
     TimelinePanel timelinePanel;
     MixerPanel mixerPanel;
+    EffectRackPanel effectRackPanel;
+
+    // Helper to find AudioTrack by ID
+    AudioTrack* getAudioTrackById(const juce::Uuid& id);
 
     // Menu IDs
     enum MenuIDs

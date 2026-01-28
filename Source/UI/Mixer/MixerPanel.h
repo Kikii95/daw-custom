@@ -27,6 +27,10 @@ public:
     // Refresh channels from project
     void refreshChannels();
 
+    // Track selection
+    void selectTrack(const juce::Uuid& trackId);
+    juce::Uuid getSelectedTrackId() const { return selectedTrackId; }
+
     // Timer for meter updates
     void timerCallback() override;
 
@@ -36,6 +40,7 @@ public:
     std::function<void(juce::Uuid, bool)> onTrackMuteChanged;
     std::function<void(juce::Uuid, bool)> onTrackSoloChanged;
     std::function<void(float)> onMasterVolumeChanged;
+    std::function<void(juce::Uuid)> onTrackSelected;
 
 private:
     std::vector<std::unique_ptr<ChannelStrip>> channelStrips;
@@ -47,6 +52,7 @@ private:
 
     Project* project = nullptr;
     AudioMixer* audioMixer = nullptr;
+    juce::Uuid selectedTrackId;
 
     juce::Viewport viewport;
     juce::Component stripContainer;

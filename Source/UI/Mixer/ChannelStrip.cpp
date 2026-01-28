@@ -68,17 +68,17 @@ ChannelStrip::~ChannelStrip()
 
 void ChannelStrip::paint(juce::Graphics& g)
 {
-    // Background
-    g.fillAll(juce::Colour(0xff2a2a2a));
+    // Background - highlight if selected
+    g.fillAll(selected ? juce::Colour(0xff3a3a3a) : juce::Colour(0xff2a2a2a));
 
     // Color bar at top
     auto colorBar = getLocalBounds().removeFromTop(4);
     g.setColour(trackColour);
     g.fillRect(colorBar);
 
-    // Border
-    g.setColour(juce::Colour(0xff3a3a3a));
-    g.drawRect(getLocalBounds());
+    // Border - highlight if selected
+    g.setColour(selected ? juce::Colour(0xff64b5f6) : juce::Colour(0xff3a3a3a));
+    g.drawRect(getLocalBounds(), selected ? 2 : 1);
 }
 
 void ChannelStrip::resized()
@@ -129,4 +129,21 @@ void ChannelStrip::setTrackData(const Track& track)
 void ChannelStrip::setMeterLevels(float left, float right)
 {
     meter.setLevels(left, right);
+}
+
+void ChannelStrip::setSelected(bool shouldBeSelected)
+{
+    if (selected != shouldBeSelected)
+    {
+        selected = shouldBeSelected;
+        repaint();
+    }
+}
+
+void ChannelStrip::mouseDown(const juce::MouseEvent& e)
+{
+    juce::Component::mouseDown(e);
+
+    if (onSelected)
+        onSelected(trackId);
 }

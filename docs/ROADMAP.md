@@ -23,23 +23,43 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 - [x] **Phase 1 MVP TERMINÉE**
 
 ### Février-Mars
-- [ ] Phase 2 : Effects (EQ, Compressor, Reverb, Delay)
-- [ ] Effect chain architecture
-- [ ] Effect rack UI
+- [x] Phase 2 Sprint 6 : Effects Core (EQ, Compressor, Reverb, Delay) ✅
+- [x] Effect chain architecture (EffectSlot, EffectChain)
+- [x] Phase 2 Sprint 7 : Effect rack UI (EffectRackPanel + EffectSlotComponent) ✅
 
 ---
 
 ## Q2 2026 — Sound Design
 
-### Avril
-- [ ] Phase 3 : Sound Design
-- [ ] Kick designer
-- [ ] Basic synth (oscillateurs, ADSR)
+### Janvier ✅
+- [x] Phase 3 Sprint 8 : Core Synthesis ✅
+  - Oscillators.h, OscillatorEffect, EnvelopeEffect
+- [x] Phase 3 Sprint 9 : Kick Designer ✅
+  - KickDesigner (808-style kick synth)
+- [x] Phase 3 Sprint 10 : Basic Synth ✅
+  - BasicSynth (Dual Osc + ADSR + Filter)
+  - SimpleFilter (LP/HP/BP)
 
-### Mai-Juin
-- [ ] VST3 hosting basique
-- [ ] Plugin scanner
-- [ ] Preset system
+### Février-Mars
+- [x] Phase 4 Sprint 11 : Plugin Infrastructure ✅
+  - PluginManager (scan, cache, async creation)
+  - VST3EffectSlot wrapper
+- [x] Phase 4 Sprint 12 : Plugin UI Integration ✅
+  - PluginEditorWindow, GenericPluginEditor
+  - EffectRackPanel integration
+- [x] **Phase 4 TERMINÉE** — VST3 Support opérationnel
+
+### Février-Mars (suite)
+- [ ] **Phase 5 : Project Save/Load** (Sprint 13-14)
+  - Serialization JSON du projet complet
+  - Restauration tracks + effets + clips + VST3
+  - Autosave optionnel
+
+### Avril-Mai
+- [ ] **Phase 6 : Preset System** (Sprint 15-16)
+  - Sauvegarder/charger presets effets + synths
+  - Preset browser UI
+  - Factory presets
 
 ---
 

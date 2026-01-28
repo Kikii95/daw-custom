@@ -51,6 +51,17 @@ target_sources(DAWCustom
         Source/Audio/DSP/Effects/ReverbEffect.cpp
         Source/Audio/DSP/Effects/DelayEffect.cpp
 
+        # Audio DSP - Synthesis
+        Source/Audio/DSP/Synthesis/OscillatorEffect.cpp
+        Source/Audio/DSP/Synthesis/EnvelopeEffect.cpp
+        Source/Audio/DSP/Synthesis/KickDesigner.cpp
+        Source/Audio/DSP/Synthesis/SimpleFilter.cpp
+        Source/Audio/DSP/Synthesis/BasicSynth.cpp
+
+        # Audio Plugins
+        Source/Audio/Plugins/PluginManager.cpp
+        Source/Audio/Plugins/VST3EffectSlot.cpp
+
         # UI - Main
         Source/UI/MainLayout.cpp
 
@@ -71,6 +82,14 @@ target_sources(DAWCustom
         Source/UI/Mixer/MeterComponent.cpp
         Source/UI/Mixer/ChannelStrip.cpp
         Source/UI/Mixer/MixerPanel.cpp
+
+        # UI - Effects
+        Source/UI/Effects/EffectSlotComponent.cpp
+        Source/UI/Effects/EffectRackPanel.cpp
+
+        # UI - Plugins
+        Source/UI/Plugins/PluginEditorWindow.cpp
+        Source/UI/Plugins/GenericPluginEditor.cpp
 
         # Utils
         Source/Utils/Tweens.cpp
