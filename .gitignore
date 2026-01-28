@@ -1,0 +1,40 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+Builds/
+
+# JUCE specific
+*.jucer
+JuceLibraryCode/
+
+# IDE
+.idea/
+.vscode/
+*.user
+*.suo
+CMakeSettings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Compiled
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# Dependencies (fetched by CMake)
+external/JUCE/
+
+# Env
+.env
+.env.local
+
+# Reference code (don't commit)
+_reference/
