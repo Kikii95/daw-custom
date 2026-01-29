@@ -2,6 +2,7 @@
 #include "Audio/AudioClip.h"
 #include "Audio/Plugins/PluginManager.h"
 #include "UI/Plugins/PluginEditorWindow.h"
+#include "Model/ProjectSerializer.h"
 
 MainComponent::MainComponent()
 {
@@ -249,8 +250,80 @@ void MainComponent::newProject()
 
 void MainComponent::openProject()
 {
-    // TODO: Implement project loading
-    DBG("Open Project - Not implemented yet");
+    // Check for unsaved changes
+    if (project->isModified())
+    {
+        auto result = juce::AlertWindow::showYesNoCancelBox(
+            juce::MessageBoxIconType::QuestionIcon,
+            "Unsaved Changes",
+            "Current project has unsaved changes. Save before opening?",
+            "Save", "Don't Save", "Cancel",
+            nullptr, nullptr
+        );
+
+        if (result == 0) // Cancel
+            return;
+
+        if (result == 1) // Save
+            saveProject();
+    }
+
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Open Project",
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+        "*" + juce::String(ProjectSerializer::FILE_EXTENSION)
+    );
+
+    chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+        [this, chooser](const juce::FileChooser& fc)
+        {
+            auto file = fc.getResult();
+            if (!file.existsAsFile())
+                return;
+
+            // Clear current project
+            project->clear();
+            mixer->clearTracks();
+            effectRackPanel.setTrack(nullptr);
+
+            // Load from file
+            if (ProjectSerializer::loadFromFile(file, *project, *mixer, fileLoader.getFormatManager()))
+            {
+                project->setProjectFile(file);
+
+                // Update UI
+                timelinePanel.setProject(project.get());
+                mixerPanel.setProject(project.get());
+                timelinePanel.refreshTracks();
+                mixerPanel.refreshChannels();
+
+                // Update transport duration
+                transport.stop();
+                transport.setPosition(0.0);
+                transport.setDuration(project->getTotalDuration());
+
+                // Auto-select first track
+                if (mixer->getNumTracks() > 0)
+                {
+                    if (auto* audioTrack = mixer->getTrack(0))
+                    {
+                        effectRackPanel.setTrack(audioTrack);
+                        mixerPanel.selectTrack(audioTrack->getId());
+                    }
+                }
+
+                updateTitle();
+                DBG("Project loaded: " + file.getFullPathName());
+            }
+            else
+            {
+                juce::AlertWindow::showMessageBoxAsync(
+                    juce::AlertWindow::WarningIcon,
+                    "Load Failed",
+                    "Failed to load project: " + ProjectSerializer::getLastError()
+                );
+            }
+        });
 }
 
 void MainComponent::saveProject()
@@ -261,14 +334,66 @@ void MainComponent::saveProject()
         return;
     }
 
-    // TODO: Implement project saving
-    DBG("Save Project - Not implemented yet");
+    // Save to existing file
+    if (ProjectSerializer::saveToFile(project->getProjectFile(), *project, *mixer))
+    {
+        project->setModified(false);
+        updateTitle();
+        DBG("Project saved: " + project->getProjectFile().getFullPathName());
+    }
+    else
+    {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Save Failed",
+            "Failed to save project: " + ProjectSerializer::getLastError()
+        );
+    }
 }
 
 void MainComponent::saveProjectAs()
 {
-    // TODO: Implement save as
-    DBG("Save Project As - Not implemented yet");
+    auto defaultFile = project->hasBeenSaved()
+        ? project->getProjectFile()
+        : juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+              .getChildFile(project->getName() + ProjectSerializer::FILE_EXTENSION);
+
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Save Project As",
+        defaultFile,
+        "*" + juce::String(ProjectSerializer::FILE_EXTENSION)
+    );
+
+    chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+        [this, chooser](const juce::FileChooser& fc)
+        {
+            auto file = fc.getResult();
+            if (file == juce::File())
+                return;
+
+            // Ensure correct extension
+            if (!file.hasFileExtension(ProjectSerializer::FILE_EXTENSION))
+                file = file.withFileExtension(ProjectSerializer::FILE_EXTENSION);
+
+            // Update project name from filename
+            project->setName(file.getFileNameWithoutExtension());
+
+            if (ProjectSerializer::saveToFile(file, *project, *mixer))
+            {
+                project->setProjectFile(file);
+                project->setModified(false);
+                updateTitle();
+                DBG("Project saved as: " + file.getFullPathName());
+            }
+            else
+            {
+                juce::AlertWindow::showMessageBoxAsync(
+                    juce::AlertWindow::WarningIcon,
+                    "Save Failed",
+                    "Failed to save project: " + ProjectSerializer::getLastError()
+                );
+            }
+        });
 }
 
 void MainComponent::importAudioFile()

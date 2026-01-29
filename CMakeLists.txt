@@ -108,6 +108,15 @@ target_sources(DAWCustom
 
         # Utils
         Source/Utils/Tweens.cpp
+
+        # Model
+        Source/Model/ProjectSerializer.cpp
+
+        # Presets
+        Source/Presets/PresetManager.cpp
+
+        # UI - Presets
+        Source/UI/Presets/PresetBrowser.cpp
 )
 
 # Include directories for our headers

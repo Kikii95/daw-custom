@@ -95,6 +95,20 @@ public:
     bool isModified() const { return modified; }
     void setModified(bool state = true) { modified = state; }
 
+    // Clear project (for new/load)
+    void clear()
+    {
+        tracks.clear();
+        name = "Untitled Project";
+        projectFile = juce::File();
+        tempo = 120.0;
+        sampleRate = 44100.0;
+        timeSignatureNum = 4;
+        timeSignatureDenom = 4;
+        masterVolume = 1.0f;
+        modified = false;
+    }
+
     // Master volume
     float getMasterVolume() const { return masterVolume; }
     void setMasterVolume(float vol) { masterVolume = juce::jmax(0.0f, vol); }
