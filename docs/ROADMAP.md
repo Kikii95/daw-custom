@@ -50,16 +50,8 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 - [x] **Phase 4 TERMINÉE** — VST3 Support opérationnel
 
 ### Février-Mars (suite)
-- [ ] **Phase 5 : Project Save/Load** (Sprint 13-14)
-  - Serialization JSON du projet complet
-  - Restauration tracks + effets + clips + VST3
-  - Autosave optionnel
-
-### Avril-Mai
-- [ ] **Phase 6 : Preset System** (Sprint 15-16)
-  - Sauvegarder/charger presets effets + synths
-  - Preset browser UI
-  - Factory presets
+- [x] ~~**Phase 5 : Project Save/Load**~~ → Moved to Sprint 17 ✅
+- [x] ~~**Phase 6 : Preset System**~~ → Moved to Sprint 18 ✅
 
 ---
 
@@ -100,12 +92,28 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 
 ---
 
+## Q1 2026 — Persistence ✅
+
+### Janvier
+- [x] **Sprint 17 : Project Save/Load** ✅
+  - ProjectSerializer (JSON serialization)
+  - .dawc file format with versioning
+  - Full state persistence (tracks, clips, effects, VST3)
+  - File menu integration (Save/Save As/Open)
+- [x] **Sprint 18 : Preset System** ✅
+  - PresetManager + PresetBrowser UI
+  - Factory presets (15+ for EQ, Comp, Reverb, Delay, Kick, Synth)
+  - Effect preset button "P"
+
+---
+
 ## Q2-Q3 2026 — Polish
 
 ### Février-Mars
-- [ ] Project save/load (JSON serialization)
-- [ ] Preset system (effects + synths)
+- [x] ~~Project save/load (JSON serialization)~~ ✅ Sprint 17
+- [x] ~~Preset system (effects + synths)~~ ✅ Sprint 18
 - [ ] Undo/redo
+- [ ] MIDI support
 
 ### Avril-Juin
 - [ ] Beta release v1.0

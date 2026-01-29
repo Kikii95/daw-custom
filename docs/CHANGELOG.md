@@ -53,6 +53,40 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Project Persistence (Sprint 17)
+- **ProjectSerializer**: JSON-based project save/load system
+  - .dawc file format with version tracking
+  - Full project state: tempo, sample rate, master volume
+  - Complete track serialization: volume, pan, mute, solo, colour
+  - Clip data with source file paths and gain
+  - Effect chain persistence with all parameters
+  - VST3 plugin state saved as base64-encoded binary
+- **File menu integration**: Save/Save As/Open with unsaved changes prompt
+- **Project.h clear()**: Reset method for new/load operations
+
+### Added — Preset System (Sprint 18)
+- **Preset data structure**: JSON-based preset format with versioning
+  - Effect parameters stored as key-value pairs
+  - VST3 state support (base64 binary)
+  - Metadata: name, author, category, effect type
+- **PresetManager**: Central preset management
+  - Preset directory structure: ~/Music/DAWCustom/Presets/Effects/<type>/
+  - Factory preset creation on first run (15+ presets)
+  - Load/save/scan operations
+  - applyPreset() and createFromEffect() methods
+- **PresetBrowser UI**: CallOutBox popup with ListBox
+  - Category filtering via ComboBox
+  - Double-click to apply preset
+  - Save button for creating new presets
+- **EffectSlotComponent**: Added "P" preset button
+- **Factory presets included**:
+  - EQ: Warm Vocal, Hi-Fi Boost, Low Cut
+  - Compressor: Gentle Glue, Punchy Drums, Vocal Control
+  - Reverb: Small Room, Large Hall, Plate
+  - Delay: Slapback, Stereo Eighth, Ambient
+  - KickDesigner: 808 Classic, Punchy House, Deep Sub
+  - BasicSynth: Warm Pad, Pluck Lead, Sub Bass
+
 ### Fixed — UX Audit (Sprint 15)
 - **Audio playback race condition**: Fixed initialization order in AudioEngine — sample rate now obtained before audio callback setup
 - **Track selection Timeline**: Added mouseDown() to TrackLane with selection highlight
@@ -194,4 +228,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Planned
 - Phase 4 complete ✅
-- Next: Preset system, Project save/load
+- Sprint 17-18 complete ✅ (Save/Load + Presets)
+- Next: UI polish, Undo/Redo, MIDI support

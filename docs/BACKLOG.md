@@ -127,6 +127,29 @@
 
 ---
 
+## 💾 Phase 8 : Persistence ✅
+
+### Sprint 17 — Project Save/Load ✅
+- [x] ProjectSerializer (JSON serialization)
+- [x] .dawc file format
+- [x] Full project state (tempo, sample rate, master volume)
+- [x] Track serialization (volume, pan, mute, solo, colour)
+- [x] Clip data (source file, gain, position, duration)
+- [x] Effect chain persistence (all parameters)
+- [x] VST3 state (base64 encoded binary)
+- [x] File menu integration (Save/Save As/Open)
+- [x] Unsaved changes prompt
+
+### Sprint 18 — Preset System ✅
+- [x] Preset data structure (JSON format)
+- [x] PresetManager (scan, save, load, apply)
+- [x] PresetBrowser UI (CallOutBox popup)
+- [x] Preset button "P" in EffectSlotComponent
+- [x] Factory presets (15+ for EQ, Comp, Reverb, Delay, Kick, Synth)
+- [x] Category filtering
+
+---
+
 ## 💡 Ideas (Backlog Long Terme)
 
 - [ ] Piano roll / MIDI editor
@@ -134,5 +157,5 @@
 - [ ] Sidechain compression
 - [ ] Spectrum analyzer
 - [ ] Mastering chain presets
-- [ ] Project save/load (JSON)
+- [x] ~~Project save/load (JSON)~~ ✅ Sprint 17
 - [ ] Undo/redo system
