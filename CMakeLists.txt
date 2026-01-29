@@ -138,3 +138,42 @@ target_link_libraries(DAWCustom
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags
 )
+
+# =============================================================================
+# Tests (optional)
+# =============================================================================
+option(BUILD_TESTS "Build unit tests" OFF)
+
+if(BUILD_TESTS)
+    enable_testing()
+
+    juce_add_console_app(DAWCustomTests
+        PRODUCT_NAME "DAW Custom Tests"
+    )
+
+    target_sources(DAWCustomTests
+        PRIVATE
+            Source/Tests/TestRunner.cpp
+    )
+
+    target_include_directories(DAWCustomTests
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    )
+
+    target_compile_definitions(DAWCustomTests
+        PRIVATE
+            JUCE_WEB_BROWSER=0
+            JUCE_USE_CURL=0
+    )
+
+    target_link_libraries(DAWCustomTests
+        PRIVATE
+            juce::juce_audio_basics
+            juce::juce_core
+        PUBLIC
+            juce::juce_recommended_config_flags
+    )
+
+    add_test(NAME UnitTests COMMAND DAWCustomTests)
+endif()
