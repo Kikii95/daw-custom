@@ -1,4 +1,5 @@
 #include "MeterComponent.h"
+#include "UI/Theme/AppTheme.h"
 
 MeterComponent::MeterComponent()
 {
@@ -12,7 +13,7 @@ MeterComponent::~MeterComponent()
 
 void MeterComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff1a1a1a));
+    g.fillAll(Theme::colour(Theme::meterBg));
 
     auto bounds = getLocalBounds().toFloat().reduced(2);
 
@@ -33,7 +34,7 @@ void MeterComponent::paint(juce::Graphics& g)
     }
 
     // Border
-    g.setColour(juce::Colour(0xff3a3a3a));
+    g.setColour(Theme::colour(Theme::border));
     g.drawRect(getLocalBounds());
 }
 
@@ -120,13 +121,13 @@ void MeterComponent::drawMeter(juce::Graphics& g, juce::Rectangle<float> bounds,
 
     // Gradient fill for level
     juce::ColourGradient gradient(
-        juce::Colour(0xff4caf50),  // Green at bottom
+        Theme::colour(Theme::meterLow),   // Green at bottom
         bounds.getX(), bounds.getBottom(),
-        juce::Colour(0xffff5722),  // Orange/Red at top
+        Theme::colour(Theme::meterHigh),  // Red at top
         bounds.getX(), bounds.getY(),
         false
     );
-    gradient.addColour(0.7, juce::Colour(0xffffc107));  // Yellow in middle
+    gradient.addColour(0.7, Theme::colour(Theme::meterMid));  // Yellow in middle
 
     g.setGradientFill(gradient);
     g.fillRect(bounds.getX(), bounds.getBottom() - levelY,
@@ -135,13 +136,13 @@ void MeterComponent::drawMeter(juce::Graphics& g, juce::Rectangle<float> bounds,
     // Peak indicator
     if (peak > 0.001f)
     {
-        g.setColour(peak > 1.0f ? juce::Colours::red : juce::Colours::white);
+        g.setColour(peak > 1.0f ? Theme::Colours::error() : Theme::Colours::text());
         g.fillRect(bounds.getX(), bounds.getBottom() - peakY - 2,
                    bounds.getWidth(), 2.0f);
     }
 
     // Scale markers
-    g.setColour(juce::Colour(0xff505050));
+    g.setColour(Theme::colour(Theme::borderLight));
     for (float db : { 0.0f, -6.0f, -12.0f, -24.0f, -48.0f })
     {
         float y = decibelsToY(db, height);

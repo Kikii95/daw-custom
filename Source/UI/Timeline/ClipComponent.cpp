@@ -1,4 +1,5 @@
 #include "ClipComponent.h"
+#include "UI/Theme/AppTheme.h"
 
 ClipComponent::ClipComponent()
 {
@@ -15,17 +16,17 @@ void ClipComponent::paint(juce::Graphics& g)
 
     // Clip background
     g.setColour(clipData.colour.withAlpha(0.8f));
-    g.fillRoundedRectangle(bounds, 4.0f);
+    g.fillRoundedRectangle(bounds, Theme::cornerRadiusSm);
 
     // Selection highlight
     if (selected)
     {
-        g.setColour(juce::Colours::white.withAlpha(0.3f));
-        g.drawRoundedRectangle(bounds.reduced(1), 4.0f, 2.0f);
+        g.setColour(Theme::Colours::accent().withAlpha(0.5f));
+        g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadiusSm, 2.0f);
     }
 
     // Clip name
-    g.setColour(juce::Colours::white);
+    g.setColour(Theme::Colours::text());
     g.setFont(11.0f);
     g.drawText(clipData.name,
                bounds.reduced(4, 2).removeFromTop(16),
@@ -34,7 +35,7 @@ void ClipComponent::paint(juce::Graphics& g)
 
     // Border
     g.setColour(clipData.colour.darker(0.3f));
-    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+    g.drawRoundedRectangle(bounds, Theme::cornerRadiusSm, 1.0f);
 }
 
 void ClipComponent::resized()

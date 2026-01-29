@@ -1,4 +1,5 @@
 #include "TimelinePanel.h"
+#include "UI/Theme/AppTheme.h"
 
 TimelinePanel::TimelinePanel()
 {
@@ -21,7 +22,17 @@ TimelinePanel::~TimelinePanel()
 
 void TimelinePanel::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff1e1e1e));
+    g.fillAll(Theme::colour(Theme::bgDark));
+
+    // Empty state
+    if (trackLanes.empty())
+    {
+        g.setColour(Theme::Colours::textMuted());
+        g.setFont(15.0f);
+        g.drawText("Drag audio files here or use File > Import Audio",
+                   getLocalBounds().withTrimmedTop(rulerHeight + 40),
+                   juce::Justification::centredTop);
+    }
 }
 
 void TimelinePanel::resized()

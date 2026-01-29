@@ -1,4 +1,5 @@
 #include "TimelineRuler.h"
+#include "UI/Theme/AppTheme.h"
 
 TimelineRuler::TimelineRuler()
 {
@@ -7,13 +8,13 @@ TimelineRuler::TimelineRuler()
 void TimelineRuler::paint(juce::Graphics& g)
 {
     // Background
-    g.fillAll(juce::Colour(0xff252525));
+    g.fillAll(Theme::colour(Theme::bgPanel));
 
     drawTimeTicks(g);
     drawPlayhead(g);
 
     // Bottom border
-    g.setColour(juce::Colour(0xff3a3a3a));
+    g.setColour(Theme::colour(Theme::border));
     g.fillRect(0, getHeight() - 1, getWidth(), 1);
 }
 
@@ -55,13 +56,13 @@ void TimelineRuler::drawTimeTicks(juce::Graphics& g)
         if (isMajor)
         {
             // Major tick
-            g.setColour(juce::Colour(0xff808080));
+            g.setColour(Theme::Colours::textMuted());
             g.drawVerticalLine(static_cast<int>(x), height * 0.3f, height);
 
             // Time label
             int minutes = static_cast<int>(t) / 60;
             int seconds = static_cast<int>(t) % 60;
-            g.setColour(juce::Colours::lightgrey);
+            g.setColour(Theme::Colours::text());
             g.drawText(juce::String::formatted("%d:%02d", minutes, seconds),
                        static_cast<int>(x) - 20, 2, 40, 14,
                        juce::Justification::centred);
@@ -69,7 +70,7 @@ void TimelineRuler::drawTimeTicks(juce::Graphics& g)
         else
         {
             // Minor tick
-            g.setColour(juce::Colour(0xff505050));
+            g.setColour(Theme::colour(Theme::borderLight));
             g.drawVerticalLine(static_cast<int>(x), height * 0.6f, height);
         }
     }
@@ -86,7 +87,7 @@ void TimelineRuler::drawPlayhead(juce::Graphics& g)
     juce::Path triangle;
     triangle.addTriangle(x - 6, 0, x + 6, 0, x, 10);
 
-    g.setColour(juce::Colour(0xffff5722));
+    g.setColour(Theme::Colours::warning());
     g.fillPath(triangle);
 
     // Vertical line

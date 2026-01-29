@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Audio/TransportController.h"
+#include "UI/Theme/AppTheme.h"
 
 class TransportBar : public juce::Component,
                      public juce::Timer,
@@ -43,12 +44,6 @@ private:
     // Tempo
     juce::Label tempoLabel { {}, "BPM:" };
     juce::Slider tempoSlider;
-
-    // Colors
-    juce::Colour bgColour { 0xff2a2a2a };
-    juce::Colour playingColour { 0xff4caf50 };
-    juce::Colour pausedColour { 0xffffc107 };
-    juce::Colour stoppedColour { 0xff607d8b };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 };

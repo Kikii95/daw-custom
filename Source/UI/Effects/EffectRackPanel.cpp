@@ -11,38 +11,33 @@
 #include "Audio/DSP/Synthesis/BasicSynth.h"
 #include "Audio/Plugins/VST3EffectSlot.h"
 #include "../Plugins/PluginEditorWindow.h"
-
-namespace Colours
-{
-    constexpr juce::uint32 panelBg = 0xff252525;
-    constexpr juce::uint32 headerBg = 0xff1e1e1e;
-    constexpr juce::uint32 addBtn = 0xff4caf50;
-    constexpr juce::uint32 textPrimary = 0xffffffff;
-    constexpr juce::uint32 textSecondary = 0xffaaaaaa;
-}
+#include "UI/Theme/AppTheme.h"
 
 EffectRackPanel::EffectRackPanel()
 {
-    titleLabel.setColour(juce::Label::textColourId, juce::Colour(Colours::textPrimary));
+    titleLabel.setColour(juce::Label::textColourId, Theme::Colours::text());
     titleLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(titleLabel);
 
     // Build combo with built-in effects and VST3 plugins
     rebuildPluginComboItems();
     effectTypeCombo.setSelectedId(100, juce::dontSendNotification);
-    effectTypeCombo.setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff333333));
-    effectTypeCombo.setColour(juce::ComboBox::textColourId, juce::Colour(Colours::textPrimary));
-    effectTypeCombo.setColour(juce::ComboBox::arrowColourId, juce::Colour(Colours::textSecondary));
+    effectTypeCombo.setColour(juce::ComboBox::backgroundColourId, Theme::colour(Theme::bgHover));
+    effectTypeCombo.setColour(juce::ComboBox::textColourId, Theme::Colours::text());
+    effectTypeCombo.setColour(juce::ComboBox::arrowColourId, Theme::Colours::textMuted());
+    effectTypeCombo.setTooltip("Select an effect to add");
     addAndMakeVisible(effectTypeCombo);
 
-    addButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Colours::addBtn));
-    addButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Colours::textPrimary));
+    addButton.setColour(juce::TextButton::buttonColourId, Theme::Colours::success());
+    addButton.setColour(juce::TextButton::textColourOffId, Theme::colour(Theme::textOnAccent));
+    addButton.setTooltip("Add selected effect");
     addButton.onClick = [this]() { addEffectFromCombo(); };
     addAndMakeVisible(addButton);
 
     // Scan button for VST3 plugins
-    scanButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2196f3));
-    scanButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Colours::textPrimary));
+    scanButton.setColour(juce::TextButton::buttonColourId, Theme::Colours::accent());
+    scanButton.setColour(juce::TextButton::textColourOffId, Theme::colour(Theme::textOnAccent));
+    scanButton.setTooltip("Scan for VST3 plugins");
     scanButton.onClick = [this]() { scanForPlugins(); };
     addAndMakeVisible(scanButton);
 
@@ -61,17 +56,26 @@ void EffectRackPanel::paint(juce::Graphics& g)
     auto bounds = getLocalBounds();
 
     // Panel background
-    g.setColour(juce::Colour(Colours::panelBg));
-    g.fillAll();
+    g.fillAll(Theme::colour(Theme::bgPanel));
 
     // Header background
     auto headerBounds = bounds.removeFromTop(headerHeight);
-    g.setColour(juce::Colour(Colours::headerBg));
+    g.setColour(Theme::colour(Theme::bgHeader));
     g.fillRect(headerBounds);
 
     // Separator
-    g.setColour(juce::Colour(0xff444444));
+    g.setColour(Theme::colour(Theme::border));
     g.fillRect(bounds.getX(), headerBounds.getBottom(), bounds.getWidth(), 1);
+
+    // Empty state
+    if (effectSlots.empty())
+    {
+        g.setColour(Theme::Colours::textMuted());
+        g.setFont(13.0f);
+        auto textArea = getLocalBounds().withTrimmedTop(headerHeight + 20);
+        g.drawText("No effects \xe2\x80\x94 Select from dropdown above",
+                   textArea, juce::Justification::centredTop);
+    }
 }
 
 void EffectRackPanel::resized()

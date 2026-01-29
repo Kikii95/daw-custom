@@ -2,8 +2,11 @@
 
 TransportBar::TransportBar()
 {
-    // Play button
-    playButton.setColour(juce::TextButton::buttonColourId, playingColour);
+    // Play button with icon
+    playButton.setButtonText(juce::CharPointer_UTF8("\xe2\x96\xb6"));  // ▶
+    playButton.setColour(juce::TextButton::buttonColourId, Theme::Colours::success());
+    playButton.setColour(juce::TextButton::textColourOffId, Theme::colour(Theme::textOnAccent));
+    playButton.setTooltip("Play (Space)");
     playButton.onClick = [this]()
     {
         if (transport != nullptr)
@@ -11,8 +14,11 @@ TransportBar::TransportBar()
     };
     addAndMakeVisible(playButton);
 
-    // Pause button
-    pauseButton.setColour(juce::TextButton::buttonColourId, pausedColour);
+    // Pause button with icon
+    pauseButton.setButtonText(juce::CharPointer_UTF8("\xe2\x8f\xb8"));  // ⏸
+    pauseButton.setColour(juce::TextButton::buttonColourId, Theme::Colours::warning());
+    pauseButton.setColour(juce::TextButton::textColourOffId, Theme::colour(Theme::textOnAccent));
+    pauseButton.setTooltip("Pause");
     pauseButton.onClick = [this]()
     {
         if (transport != nullptr)
@@ -20,8 +26,11 @@ TransportBar::TransportBar()
     };
     addAndMakeVisible(pauseButton);
 
-    // Stop button
-    stopButton.setColour(juce::TextButton::buttonColourId, stoppedColour);
+    // Stop button with icon
+    stopButton.setButtonText(juce::CharPointer_UTF8("\xe2\x8f\xb9"));  // ⏹
+    stopButton.setColour(juce::TextButton::buttonColourId, Theme::Colours::textMuted());
+    stopButton.setColour(juce::TextButton::textColourOffId, Theme::colour(Theme::textOnAccent));
+    stopButton.setTooltip("Stop and reset (Enter)");
     stopButton.onClick = [this]()
     {
         if (transport != nullptr)
@@ -31,26 +40,27 @@ TransportBar::TransportBar()
 
     // Position display
     positionLabel.setFont(juce::Font("Monospace", 18.0f, juce::Font::bold));
-    positionLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    positionLabel.setColour(juce::Label::textColourId, Theme::Colours::text());
     positionLabel.setJustificationType(juce::Justification::centred);
     positionLabel.setText("00:00.000", juce::dontSendNotification);
     addAndMakeVisible(positionLabel);
 
     // Duration display
     durationLabel.setFont(juce::Font("Monospace", 12.0f, juce::Font::plain));
-    durationLabel.setColour(juce::Label::textColourId, juce::Colours::grey);
+    durationLabel.setColour(juce::Label::textColourId, Theme::Colours::textMuted());
     durationLabel.setJustificationType(juce::Justification::centred);
     durationLabel.setText("/ 00:00.000", juce::dontSendNotification);
     addAndMakeVisible(durationLabel);
 
     // Tempo
-    tempoLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    tempoLabel.setColour(juce::Label::textColourId, Theme::Colours::textMuted());
     addAndMakeVisible(tempoLabel);
 
     tempoSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     tempoSlider.setRange(20.0, 300.0, 0.1);
     tempoSlider.setValue(120.0);
     tempoSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
+    tempoSlider.setTooltip("Tempo: 20-300 BPM");
     tempoSlider.onValueChange = [this]()
     {
         if (transport != nullptr)
@@ -95,6 +105,7 @@ void TransportBar::resized()
 
 void TransportBar::paint(juce::Graphics& g)
 {
+    auto bgColour = Theme::colour(Theme::bgSlot);
     g.fillAll(bgColour);
 
     // Subtle gradient
@@ -105,7 +116,7 @@ void TransportBar::paint(juce::Graphics& g)
     g.fillRect(getLocalBounds());
 
     // Bottom border
-    g.setColour(juce::Colour(0xff1a1a1a));
+    g.setColour(Theme::colour(Theme::bgDark));
     g.fillRect(0, getHeight() - 1, getWidth(), 1);
 }
 

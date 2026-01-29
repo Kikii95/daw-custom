@@ -2,32 +2,19 @@
 #include "UI/Plugins/PluginEditorWindow.h"
 #include "UI/Theme/AppTheme.h"
 
-// Legacy colours - will be replaced by Theme:: in Sprint 2
-namespace Colours
-{
-    constexpr juce::uint32 background = 0xff2a2a2a;
-    constexpr juce::uint32 headerBg = 0xff333333;
-    constexpr juce::uint32 bypassOff = 0xff424242;
-    constexpr juce::uint32 bypassOn = 0xffff9800;
-    constexpr juce::uint32 editBtn = 0xff2196f3;  // Blue accent
-    constexpr juce::uint32 removeBtn = 0xfff44336;
-    constexpr juce::uint32 knobAccent = 0xff64b5f6;
-    constexpr juce::uint32 textPrimary = 0xffffffff;
-    constexpr juce::uint32 textSecondary = 0xffaaaaaa;
-}
-
 EffectSlotComponent::EffectSlotComponent()
 {
-    nameLabel.setColour(juce::Label::textColourId, juce::Colour(Colours::textPrimary));
+    nameLabel.setColour(juce::Label::textColourId, Theme::Colours::text());
     nameLabel.setJustificationType(juce::Justification::centredLeft);
     nameLabel.setFont(juce::Font(14.0f, juce::Font::bold));
     addAndMakeVisible(nameLabel);
 
     bypassButton.setClickingTogglesState(true);
-    bypassButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Colours::bypassOff));
-    bypassButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(Colours::bypassOn));
-    bypassButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Colours::textPrimary));
-    bypassButton.setColour(juce::TextButton::textColourOnId, juce::Colour(0xff000000));
+    bypassButton.setColour(juce::TextButton::buttonColourId, Theme::colour(Theme::bgHover));
+    bypassButton.setColour(juce::TextButton::buttonOnColourId, Theme::Colours::warning());
+    bypassButton.setColour(juce::TextButton::textColourOffId, Theme::Colours::text());
+    bypassButton.setColour(juce::TextButton::textColourOnId, Theme::colour(Theme::textOnAccent));
+    bypassButton.setTooltip("Bypass effect (B)");
     bypassButton.onClick = [this]()
     {
         if (effectSlot)
@@ -40,8 +27,9 @@ EffectSlotComponent::EffectSlotComponent()
     addAndMakeVisible(bypassButton);
 
     // Edit button - only visible for VST3 plugins
-    editButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Colours::editBtn));
-    editButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Colours::textPrimary));
+    editButton.setColour(juce::TextButton::buttonColourId, Theme::Colours::accent());
+    editButton.setColour(juce::TextButton::textColourOffId, Theme::colour(Theme::textOnAccent));
+    editButton.setTooltip("Open plugin editor");
     editButton.onClick = [this]()
     {
         // Open VST3 plugin editor window
@@ -58,8 +46,9 @@ EffectSlotComponent::EffectSlotComponent()
     editButton.setVisible(false);  // Hidden by default, shown for VST3
     addAndMakeVisible(editButton);
 
-    removeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Colours::removeBtn));
-    removeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Colours::textPrimary));
+    removeButton.setColour(juce::TextButton::buttonColourId, Theme::Colours::error());
+    removeButton.setColour(juce::TextButton::textColourOffId, Theme::colour(Theme::textOnAccent));
+    removeButton.setTooltip("Remove effect");
     removeButton.onClick = [this]()
     {
         if (onRemoveClicked)
@@ -78,17 +67,17 @@ void EffectSlotComponent::paint(juce::Graphics& g)
     auto bounds = getLocalBounds();
 
     // Background
-    g.setColour(juce::Colour(Colours::background));
-    g.fillRoundedRectangle(bounds.toFloat(), 4.0f);
+    g.setColour(Theme::colour(Theme::bgSlot));
+    g.fillRoundedRectangle(bounds.toFloat(), Theme::cornerRadius);
 
     // Header background
     auto headerBounds = bounds.removeFromTop(headerHeight);
-    g.setColour(juce::Colour(Colours::headerBg));
-    g.fillRoundedRectangle(headerBounds.toFloat().withTrimmedBottom(2), 4.0f);
+    g.setColour(Theme::colour(Theme::bgHover));
+    g.fillRoundedRectangle(headerBounds.toFloat().withTrimmedBottom(2), Theme::cornerRadius);
 
     // Outline
-    g.setColour(juce::Colour(0xff444444));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 4.0f, 1.0f);
+    g.setColour(Theme::colour(Theme::border));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), Theme::cornerRadius, 1.0f);
 }
 
 void EffectSlotComponent::resized()
@@ -192,7 +181,7 @@ void EffectSlotComponent::buildParameterControls()
 
         ctrl.label = std::make_unique<juce::Label>();
         ctrl.label->setText(effectSlot->getParameterName(i), juce::dontSendNotification);
-        ctrl.label->setColour(juce::Label::textColourId, juce::Colour(Colours::textSecondary));
+        ctrl.label->setColour(juce::Label::textColourId, Theme::Colours::textMuted());
         ctrl.label->setFont(juce::Font(11.0f));
         ctrl.label->setJustificationType(juce::Justification::centred);
         addAndMakeVisible(ctrl.label.get());
@@ -205,11 +194,11 @@ void EffectSlotComponent::buildParameterControls()
         ctrl.slider->setValue(static_cast<double>(effectSlot->getParameter(i)),
                               juce::dontSendNotification);
         ctrl.slider->setColour(juce::Slider::rotarySliderFillColourId,
-                               juce::Colour(Colours::knobAccent));
+                               Theme::Colours::accent());
         ctrl.slider->setColour(juce::Slider::thumbColourId,
-                               juce::Colour(Colours::knobAccent));
+                               Theme::Colours::accent());
         ctrl.slider->setColour(juce::Slider::textBoxTextColourId,
-                               juce::Colour(Colours::textPrimary));
+                               Theme::Colours::text());
         ctrl.slider->setColour(juce::Slider::textBoxBackgroundColourId,
                                juce::Colour(0x00000000));
         ctrl.slider->setColour(juce::Slider::textBoxOutlineColourId,

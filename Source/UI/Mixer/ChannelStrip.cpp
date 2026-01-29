@@ -1,4 +1,5 @@
 #include "ChannelStrip.h"
+#include "UI/Theme/AppTheme.h"
 
 ChannelStrip::ChannelStrip()
 {
@@ -7,7 +8,8 @@ ChannelStrip::ChannelStrip()
     volumeSlider.setRange(0.0, 2.0, 0.01);
     volumeSlider.setValue(1.0);
     volumeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 18);
-    volumeSlider.setColour(juce::Slider::thumbColourId, juce::Colour(0xff64b5f6));
+    volumeSlider.setColour(juce::Slider::thumbColourId, Theme::colour(Theme::accentBlue));
+    volumeSlider.setTooltip("Volume: 0% to 200%");
     volumeSlider.onValueChange = [this]()
     {
         if (onVolumeChanged)
@@ -20,7 +22,8 @@ ChannelStrip::ChannelStrip()
     panSlider.setRange(-1.0, 1.0, 0.01);
     panSlider.setValue(0.0);
     panSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
-    panSlider.setColour(juce::Slider::thumbColourId, juce::Colour(0xff9c27b0));
+    panSlider.setColour(juce::Slider::thumbColourId, Theme::colour(Theme::accentPurple));
+    panSlider.setTooltip("Pan: Left/Right balance");
     panSlider.onValueChange = [this]()
     {
         if (onPanChanged)
@@ -29,9 +32,10 @@ ChannelStrip::ChannelStrip()
     addAndMakeVisible(panSlider);
 
     // Mute button
-    muteButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff424242));
-    muteButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
+    muteButton.setColour(juce::TextButton::buttonColourId, Theme::colour(Theme::bgHover));
+    muteButton.setColour(juce::TextButton::buttonOnColourId, Theme::Colours::error());
     muteButton.setClickingTogglesState(true);
+    muteButton.setTooltip("Mute track (M)");
     muteButton.onClick = [this]()
     {
         muted = muteButton.getToggleState();
@@ -41,9 +45,10 @@ ChannelStrip::ChannelStrip()
     addAndMakeVisible(muteButton);
 
     // Solo button
-    soloButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff424242));
-    soloButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow);
+    soloButton.setColour(juce::TextButton::buttonColourId, Theme::colour(Theme::bgHover));
+    soloButton.setColour(juce::TextButton::buttonOnColourId, Theme::colour(Theme::meterMid));
     soloButton.setClickingTogglesState(true);
+    soloButton.setTooltip("Solo track (S)");
     soloButton.onClick = [this]()
     {
         solo = soloButton.getToggleState();
@@ -54,7 +59,7 @@ ChannelStrip::ChannelStrip()
 
     // Name label
     nameLabel.setFont(juce::Font(11.0f, juce::Font::bold));
-    nameLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    nameLabel.setColour(juce::Label::textColourId, Theme::Colours::text());
     nameLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(nameLabel);
 
@@ -68,8 +73,13 @@ ChannelStrip::~ChannelStrip()
 
 void ChannelStrip::paint(juce::Graphics& g)
 {
-    // Background - highlight if selected
-    g.fillAll(selected ? juce::Colour(0xff3a3a3a) : juce::Colour(0xff2a2a2a));
+    // Background - highlight if selected or hovered
+    juce::Colour bgColor = Theme::colour(Theme::bgSlot);
+    if (selected)
+        bgColor = Theme::colour(Theme::bgSelected);
+    else if (hovered)
+        bgColor = Theme::colour(Theme::bgHover);
+    g.fillAll(bgColor);
 
     // Color bar at top
     auto colorBar = getLocalBounds().removeFromTop(4);
@@ -77,7 +87,7 @@ void ChannelStrip::paint(juce::Graphics& g)
     g.fillRect(colorBar);
 
     // Border - highlight if selected
-    g.setColour(selected ? juce::Colour(0xff64b5f6) : juce::Colour(0xff3a3a3a));
+    g.setColour(selected ? Theme::Colours::accent() : Theme::colour(Theme::border));
     g.drawRect(getLocalBounds(), selected ? 2 : 1);
 }
 
@@ -146,4 +156,16 @@ void ChannelStrip::mouseDown(const juce::MouseEvent& e)
 
     if (onSelected)
         onSelected(trackId);
+}
+
+void ChannelStrip::mouseEnter(const juce::MouseEvent& /*e*/)
+{
+    hovered = true;
+    repaint();
+}
+
+void ChannelStrip::mouseExit(const juce::MouseEvent& /*e*/)
+{
+    hovered = false;
+    repaint();
 }

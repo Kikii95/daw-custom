@@ -32,9 +32,12 @@ public:
     bool isSelected() const { return selected; }
 
     void mouseDown(const juce::MouseEvent& e) override;
+    void mouseEnter(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
 private:
     bool selected = false;
+    bool hovered = false;
     juce::Uuid trackId;
     juce::String trackName;
     juce::Colour trackColour;

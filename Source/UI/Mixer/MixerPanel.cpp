@@ -1,4 +1,5 @@
 #include "MixerPanel.h"
+#include "UI/Theme/AppTheme.h"
 
 MixerPanel::MixerPanel()
 {
@@ -12,7 +13,8 @@ MixerPanel::MixerPanel()
     masterVolume.setRange(0.0, 2.0, 0.01);
     masterVolume.setValue(1.0);
     masterVolume.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 18);
-    masterVolume.setColour(juce::Slider::thumbColourId, juce::Colour(0xffff9800));
+    masterVolume.setColour(juce::Slider::thumbColourId, Theme::colour(Theme::accentOrange));
+    masterVolume.setTooltip("Master Volume: 0% to 200%");
     masterVolume.onValueChange = [this]()
     {
         if (onMasterVolumeChanged)
@@ -22,7 +24,7 @@ MixerPanel::MixerPanel()
 
     // Master label
     masterLabel.setFont(juce::Font(12.0f, juce::Font::bold));
-    masterLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    masterLabel.setColour(juce::Label::textColourId, Theme::Colours::text());
     masterLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(masterLabel);
 
@@ -39,16 +41,26 @@ MixerPanel::~MixerPanel()
 
 void MixerPanel::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff252525));
+    g.fillAll(Theme::colour(Theme::bgPanel));
 
     // Master section background
     auto masterArea = getLocalBounds().removeFromRight(masterWidth);
-    g.setColour(juce::Colour(0xff2d2d2d));
+    g.setColour(Theme::colour(Theme::bgSlot));
     g.fillRect(masterArea);
 
     // Divider
-    g.setColour(juce::Colour(0xff3a3a3a));
+    g.setColour(Theme::colour(Theme::border));
     g.drawVerticalLine(getWidth() - masterWidth, 0.0f, static_cast<float>(getHeight()));
+
+    // Empty state
+    if (channelStrips.empty())
+    {
+        g.setColour(Theme::Colours::textMuted());
+        g.setFont(14.0f);
+        auto textArea = getLocalBounds().withTrimmedRight(masterWidth);
+        g.drawText("No tracks yet \xe2\x80\x94 Import audio to get started",
+                   textArea, juce::Justification::centred);
+    }
 }
 
 void MixerPanel::resized()

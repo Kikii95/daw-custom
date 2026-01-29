@@ -1,4 +1,5 @@
 #include "TrackLane.h"
+#include "UI/Theme/AppTheme.h"
 
 TrackLane::TrackLane()
 {
@@ -11,7 +12,7 @@ TrackLane::~TrackLane()
 void TrackLane::paint(juce::Graphics& g)
 {
     // Track background
-    g.fillAll(juce::Colour(0xff2a2a2a));
+    g.fillAll(Theme::colour(Theme::bgSlot));
 
     // Header area
     auto headerArea = getLocalBounds().removeFromLeft(headerWidth);
@@ -19,7 +20,7 @@ void TrackLane::paint(juce::Graphics& g)
     g.fillRect(headerArea);
 
     // Track name
-    g.setColour(juce::Colours::white);
+    g.setColour(Theme::Colours::text());
     g.setFont(12.0f);
     g.drawText(trackData.name,
                headerArea.reduced(8, 4),
@@ -29,24 +30,33 @@ void TrackLane::paint(juce::Graphics& g)
     auto indicatorArea = headerArea.removeFromBottom(20).reduced(8, 2);
     if (trackData.muted)
     {
-        g.setColour(juce::Colours::red.withAlpha(0.7f));
-        g.fillRoundedRectangle(indicatorArea.removeFromLeft(20).toFloat(), 3.0f);
-        g.setColour(juce::Colours::white);
+        g.setColour(Theme::Colours::error().withAlpha(0.7f));
+        g.fillRoundedRectangle(indicatorArea.removeFromLeft(20).toFloat(), Theme::cornerRadiusSm);
+        g.setColour(Theme::Colours::text());
         g.setFont(10.0f);
         g.drawText("M", indicatorArea.withWidth(20), juce::Justification::centred);
     }
 
     if (trackData.solo)
     {
-        g.setColour(juce::Colours::yellow.withAlpha(0.7f));
-        g.fillRoundedRectangle(indicatorArea.removeFromLeft(20).toFloat(), 3.0f);
-        g.setColour(juce::Colours::black);
+        g.setColour(Theme::colour(Theme::meterMid).withAlpha(0.7f));
+        g.fillRoundedRectangle(indicatorArea.removeFromLeft(20).toFloat(), Theme::cornerRadiusSm);
+        g.setColour(Theme::colour(Theme::textOnAccent));
         g.setFont(10.0f);
         g.drawText("S", indicatorArea.withWidth(20), juce::Justification::centred);
     }
 
+    // Empty clip state
+    if (clipComponents.empty())
+    {
+        auto contentArea = getLocalBounds().withTrimmedLeft(headerWidth);
+        g.setColour(Theme::Colours::textDisabled());
+        g.setFont(11.0f);
+        g.drawText("Drop audio here", contentArea, juce::Justification::centred);
+    }
+
     // Border
-    g.setColour(juce::Colour(0xff3a3a3a));
+    g.setColour(Theme::colour(Theme::border));
     g.drawRect(getLocalBounds());
 }
 

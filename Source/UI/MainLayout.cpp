@@ -1,4 +1,5 @@
 #include "MainLayout.h"
+#include "UI/Theme/AppTheme.h"
 
 MainLayout::MainLayout()
 {
@@ -26,24 +27,18 @@ void MainLayout::resized()
 void MainLayout::paint(juce::Graphics& g)
 {
     // Dark background
-    g.fillAll(juce::Colour(0xff1e1e1e));
+    g.fillAll(Theme::colour(Theme::bgDark));
 
-    // Timeline area placeholder
-    g.setColour(juce::Colour(0xff2d2d2d));
+    // Timeline area
+    g.setColour(Theme::colour(Theme::bgSlot));
     g.fillRect(timelineArea);
 
-    // Mixer area placeholder
-    g.setColour(juce::Colour(0xff252525));
+    // Mixer area
+    g.setColour(Theme::colour(Theme::bgPanel));
     g.fillRect(mixerArea);
 
     // Draw divider lines
-    g.setColour(juce::Colour(0xff3d3d3d));
+    g.setColour(Theme::colour(Theme::border));
     g.drawHorizontalLine(transportBarHeight, 0.0f, static_cast<float>(getWidth()));
     g.drawHorizontalLine(getHeight() - mixerPanelHeight, 0.0f, static_cast<float>(getWidth()));
-
-    // Placeholder text
-    g.setColour(juce::Colours::grey);
-    g.setFont(14.0f);
-    g.drawText("Timeline", timelineArea, juce::Justification::centred);
-    g.drawText("Mixer", mixerArea, juce::Justification::centred);
 }
