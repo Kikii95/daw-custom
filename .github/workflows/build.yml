@@ -102,10 +102,10 @@ jobs:
           if-no-files-found: warn
 
   # ==========================================================================
-  # macOS Build (macos-13 for JUCE 7.x compatibility with Xcode 15)
+  # macOS Build
   # ==========================================================================
   macos:
-    runs-on: macos-13
+    runs-on: macos-14
 
     steps:
       - uses: actions/checkout@v4
