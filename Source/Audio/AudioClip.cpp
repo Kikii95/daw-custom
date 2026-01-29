@@ -51,40 +51,62 @@ void AudioClip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFi
     const int startSample = bufferToFill.startSample;
     const int numChannels = juce::jmin(outBuffer->getNumChannels(), audioBuffer->getNumChannels());
 
-    const auto totalLength = static_cast<juce::int64>(audioBuffer->getNumSamples());
+    const auto totalLength = static_cast<double>(audioBuffer->getNumSamples());
+
+    // Direction multiplier: +1 forward, -1 reverse
+    const double direction = reversed ? -1.0 : 1.0;
+    const double increment = playbackSpeed * direction;
 
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        if (readPosition >= totalLength)
+        // Handle bounds (forward or reverse)
+        if (readPosition >= totalLength - 1.0)
         {
             if (looping)
-                readPosition = 0;
+                readPosition = reversed ? totalLength - 1.0 : 0.0;
             else
             {
-                // Clear remaining samples
+                for (int ch = 0; ch < outBuffer->getNumChannels(); ++ch)
+                    outBuffer->clear(ch, startSample + sample, numSamples - sample);
+                return;
+            }
+        }
+        else if (readPosition < 0.0)
+        {
+            if (looping)
+                readPosition = reversed ? totalLength - 1.0 : 0.0;
+            else
+            {
                 for (int ch = 0; ch < outBuffer->getNumChannels(); ++ch)
                     outBuffer->clear(ch, startSample + sample, numSamples - sample);
                 return;
             }
         }
 
-        const auto srcPos = static_cast<int>(readPosition);
+        // Linear interpolation for variable speed playback
+        const int idx0 = static_cast<int>(readPosition);
+        const int idx1 = juce::jmin(idx0 + 1, static_cast<int>(totalLength) - 1);
+        const float frac = static_cast<float>(readPosition - idx0);
 
         for (int ch = 0; ch < numChannels; ++ch)
         {
-            float sourceSample = audioBuffer->getSample(ch, srcPos);
-            outBuffer->addSample(ch, startSample + sample, sourceSample * gain);
+            float s0 = audioBuffer->getSample(ch, idx0);
+            float s1 = audioBuffer->getSample(ch, idx1);
+            float interpolated = s0 + frac * (s1 - s0);  // Linear interpolation
+            outBuffer->addSample(ch, startSample + sample, interpolated * gain);
         }
 
         // Handle mono to stereo
         if (numChannels == 1 && outBuffer->getNumChannels() > 1)
         {
-            float sourceSample = audioBuffer->getSample(0, srcPos);
+            float s0 = audioBuffer->getSample(0, idx0);
+            float s1 = audioBuffer->getSample(0, idx1);
+            float interpolated = s0 + frac * (s1 - s0);
             for (int ch = 1; ch < outBuffer->getNumChannels(); ++ch)
-                outBuffer->addSample(ch, startSample + sample, sourceSample * gain);
+                outBuffer->addSample(ch, startSample + sample, interpolated * gain);
         }
 
-        ++readPosition;
+        readPosition += increment;
     }
 }
 
@@ -97,13 +119,13 @@ juce::int64 AudioClip::getTotalLength() const
 void AudioClip::setNextReadPosition(juce::int64 newPosition)
 {
     juce::ScopedLock sl(lock);
-    readPosition = juce::jmax(juce::int64(0), newPosition);
+    readPosition = juce::jmax(0.0, static_cast<double>(newPosition));
 }
 
 juce::int64 AudioClip::getNextReadPosition() const
 {
     juce::ScopedLock sl(lock);
-    return readPosition;
+    return static_cast<juce::int64>(readPosition);
 }
 
 bool AudioClip::containsPosition(juce::int64 positionInSamples, double projectSampleRate) const

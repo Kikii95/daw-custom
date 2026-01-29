@@ -51,6 +51,18 @@ TransportBar::TransportBar()
     };
     addAndMakeVisible(loopButton);
 
+    // Reverse toggle button
+    reverseButton.setButtonText(juce::CharPointer_UTF8("\xe2\x8f\xaa"));  // ⏪
+    reverseButton.setColour(juce::ToggleButton::textColourId, Theme::Colours::text());
+    reverseButton.setColour(juce::ToggleButton::tickColourId, Theme::Colours::accent());
+    reverseButton.setTooltip("Toggle reverse playback");
+    reverseButton.onClick = [this]()
+    {
+        if (transport != nullptr)
+            transport->setReversed(reverseButton.getToggleState());
+    };
+    addAndMakeVisible(reverseButton);
+
     // Position display
     positionLabel.setFont(juce::Font("Monospace", 18.0f, juce::Font::bold));
     positionLabel.setColour(juce::Label::textColourId, Theme::Colours::text());
@@ -81,6 +93,22 @@ TransportBar::TransportBar()
     };
     addAndMakeVisible(tempoSlider);
 
+    // Speed control
+    speedLabel.setColour(juce::Label::textColourId, Theme::Colours::textMuted());
+    addAndMakeVisible(speedLabel);
+
+    speedSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    speedSlider.setRange(0.25, 4.0, 0.05);
+    speedSlider.setValue(1.0);
+    speedSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
+    speedSlider.setTooltip("Playback speed: 0.25x - 4x");
+    speedSlider.onValueChange = [this]()
+    {
+        if (transport != nullptr)
+            transport->setPlaybackSpeed(speedSlider.getValue());
+    };
+    addAndMakeVisible(speedSlider);
+
     // Start timer for position updates
     startTimerHz(30);
 }
@@ -97,18 +125,24 @@ void TransportBar::resized()
 {
     auto bounds = getLocalBounds().reduced(8);
 
-    // Transport buttons on the left (play, pause, stop, loop)
-    auto buttonArea = bounds.removeFromLeft(250);
-    auto buttonWidth = buttonArea.getWidth() / 4;
+    // Transport buttons on the left (play, pause, stop, loop, reverse)
+    auto buttonArea = bounds.removeFromLeft(300);
+    auto buttonWidth = buttonArea.getWidth() / 5;
 
     playButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
     pauseButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
     stopButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
-    loopButton.setBounds(buttonArea.reduced(2));
+    loopButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
+    reverseButton.setBounds(buttonArea.reduced(2));
 
-    // Tempo on the right
-    auto tempoArea = bounds.removeFromRight(200);
-    tempoLabel.setBounds(tempoArea.removeFromLeft(40));
+    // Speed control on the right
+    auto speedArea = bounds.removeFromRight(150);
+    speedLabel.setBounds(speedArea.removeFromLeft(45));
+    speedSlider.setBounds(speedArea);
+
+    // Tempo
+    auto tempoArea = bounds.removeFromRight(180);
+    tempoLabel.setBounds(tempoArea.removeFromLeft(35));
     tempoSlider.setBounds(tempoArea);
 
     // Position in center
@@ -175,6 +209,8 @@ void TransportBar::setTransportController(TransportController* controller)
     {
         transport->addListener(this);
         tempoSlider.setValue(transport->getTempo(), juce::dontSendNotification);
+        speedSlider.setValue(transport->getPlaybackSpeed(), juce::dontSendNotification);
+        reverseButton.setToggleState(transport->isReversed(), juce::dontSendNotification);
         updateButtonStates();
         updatePositionDisplay();
     }

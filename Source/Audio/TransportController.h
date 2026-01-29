@@ -61,6 +61,14 @@ public:
     void setLoopRange(double start, double end);
     void clearLoop();
 
+    // Playback speed (0.25x - 4x)
+    void setPlaybackSpeed(double speed);
+    double getPlaybackSpeed() const;
+
+    // Reverse playback
+    void setReversed(bool reversed);
+    bool isReversed() const;
+
     // Called from audio thread to advance position
     void advancePosition(int numSamples, double sampleRate);
 
@@ -82,6 +90,10 @@ private:
     std::atomic<bool> loopEnabled { false };
     std::atomic<double> loopStart { 0.0 };
     std::atomic<double> loopEnd { 0.0 };
+
+    // Speed and direction
+    std::atomic<double> playbackSpeed { 1.0 };
+    std::atomic<bool> reversed { false };
 
     std::vector<Listener*> listeners;
     juce::CriticalSection listenerLock;

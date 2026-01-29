@@ -33,6 +33,14 @@ public:
     void setMuted(bool shouldMute) { muted = shouldMute; }
     bool isMuted() const { return muted; }
 
+    // Variable speed (0.25x - 4x)
+    void setPlaybackSpeed(double speed) { playbackSpeed = juce::jlimit(0.25, 4.0, speed); }
+    double getPlaybackSpeed() const { return playbackSpeed; }
+
+    // Reverse playback
+    void setReversed(bool shouldReverse) { reversed = shouldReverse; }
+    bool isReversed() const { return reversed; }
+
     // Timeline info
     double getStartTime() const { return clipData.startTime; }
     double getDuration() const { return clipData.duration; }
@@ -54,10 +62,12 @@ private:
     double sourceSampleRate = 0.0;
     double playbackSampleRate = 0.0;
 
-    juce::int64 readPosition = 0;
+    double readPosition = 0.0;       // Fractional position for variable speed
+    double playbackSpeed = 1.0;      // Speed multiplier (0.25 - 4.0)
     float gain = 1.0f;
     bool muted = false;
     bool looping = false;
+    bool reversed = false;           // Reverse playback direction
 
     juce::CriticalSection lock;
 

@@ -5,6 +5,7 @@
 #include "Audio/DSP/Effects/ReverbEffect.h"
 #include "Audio/DSP/Effects/DelayEffect.h"
 #include "Audio/DSP/Effects/TremoloEffect.h"
+#include "Audio/DSP/Effects/SpatializerEffect.h"
 #include "Audio/DSP/Synthesis/OscillatorEffect.h"
 #include "Audio/DSP/Synthesis/EnvelopeEffect.h"
 #include "Audio/DSP/Synthesis/KickDesigner.h"
@@ -227,6 +228,9 @@ void EffectRackPanel::addEffectFromCombo()
         case EffectType::Tremolo:
             newEffect = std::make_unique<TremoloEffect>();
             break;
+        case EffectType::Spatializer:
+            newEffect = std::make_unique<SpatializerEffect>();
+            break;
         case EffectType::Oscillator:
             newEffect = std::make_unique<OscillatorEffect>();
             break;
@@ -298,6 +302,7 @@ void EffectRackPanel::rebuildPluginComboItems()
     effectTypeCombo.addItem("Reverb", EffectType::Reverb);
     effectTypeCombo.addItem("Delay", EffectType::Delay);
     effectTypeCombo.addItem("Tremolo", EffectType::Tremolo);
+    effectTypeCombo.addItem("Spatializer 3D", EffectType::Spatializer);
     effectTypeCombo.addSeparator();
     effectTypeCombo.addSectionHeading("Synthesis");
     effectTypeCombo.addItem("Oscillator", EffectType::Oscillator);

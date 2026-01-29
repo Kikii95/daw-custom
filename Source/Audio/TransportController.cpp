@@ -155,11 +155,35 @@ void TransportController::clearLoop()
     notifyLoopChanged();
 }
 
+void TransportController::setPlaybackSpeed(double speed)
+{
+    playbackSpeed.store(juce::jlimit(0.25, 4.0, speed));
+}
+
+double TransportController::getPlaybackSpeed() const
+{
+    return playbackSpeed.load();
+}
+
+void TransportController::setReversed(bool rev)
+{
+    reversed.store(rev);
+}
+
+bool TransportController::isReversed() const
+{
+    return reversed.load();
+}
+
 void TransportController::advancePosition(int numSamples, double sampleRate)
 {
     if (isPlaying() && sampleRate > 0)
     {
-        double advance = static_cast<double>(numSamples) / sampleRate;
+        double speed = playbackSpeed.load();
+        bool rev = reversed.load();
+        double direction = rev ? -1.0 : 1.0;
+
+        double advance = (static_cast<double>(numSamples) / sampleRate) * speed * direction;
         double newPos = position.load() + advance;
         double dur = duration.load();
 
@@ -170,16 +194,33 @@ void TransportController::advancePosition(int numSamples, double sampleRate)
 
         if (loop && lEnd > lStart)
         {
-            // Loop back when we reach loop end
-            if (newPos >= lEnd)
+            // Loop handling (forward)
+            if (!rev && newPos >= lEnd)
             {
                 newPos = lStart + std::fmod(newPos - lStart, lEnd - lStart);
             }
+            // Loop handling (reverse)
+            else if (rev && newPos < lStart)
+            {
+                double range = lEnd - lStart;
+                newPos = lEnd - std::fmod(lStart - newPos, range);
+            }
         }
-        else if (dur > 0.0 && newPos >= dur)
+        else if (!rev && dur > 0.0 && newPos >= dur)
         {
-            // Stop at end of project (no loop)
+            // Stop at end of project (forward, no loop)
             newPos = dur;
+            state.store(State::Stopped);
+
+            juce::MessageManager::callAsync([this]()
+            {
+                notifyStateChanged();
+            });
+        }
+        else if (rev && newPos < 0.0)
+        {
+            // Stop at beginning (reverse, no loop)
+            newPos = 0.0;
             state.store(State::Stopped);
 
             juce::MessageManager::callAsync([this]()

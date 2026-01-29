@@ -38,6 +38,7 @@ private:
     juce::TextButton pauseButton { "Pause" };
     juce::TextButton stopButton { "Stop" };
     juce::ToggleButton loopButton { "Loop" };
+    juce::ToggleButton reverseButton { "Rev" };
 
     // Position display
     juce::Label positionLabel;
@@ -46,6 +47,10 @@ private:
     // Tempo
     juce::Label tempoLabel { {}, "BPM:" };
     juce::Slider tempoSlider;
+
+    // Speed control
+    juce::Label speedLabel { {}, "Speed:" };
+    juce::Slider speedSlider;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 };

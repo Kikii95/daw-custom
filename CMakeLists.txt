@@ -51,6 +51,7 @@ target_sources(DAWCustom
         Source/Audio/DSP/Effects/ReverbEffect.cpp
         Source/Audio/DSP/Effects/DelayEffect.cpp
         Source/Audio/DSP/Effects/TremoloEffect.cpp
+        Source/Audio/DSP/Effects/SpatializerEffect.cpp
 
         # Audio DSP - Synthesis
         Source/Audio/DSP/Synthesis/OscillatorEffect.cpp
