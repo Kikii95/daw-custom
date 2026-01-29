@@ -59,6 +59,10 @@ MainComponent::MainComponent()
     // Set default size
     setSize(1400, 900);
 
+    // Register keyboard listener
+    addKeyListener(this);
+    setWantsKeyboardFocus(true);
+
     updateTitle();
 }
 
@@ -86,10 +90,10 @@ void MainComponent::resized()
     // Menu bar at top
     menuBar.setBounds(bounds.removeFromTop(24));
 
-    // Transport bar (part of main layout, but we position timeline/mixer manually)
+    // Transport bar at top
     auto transportHeight = 60;
     auto transportArea = bounds.removeFromTop(transportHeight);
-    mainLayout.getTransportBar().setBounds(transportArea);
+    mainLayout.setBounds(transportArea);  // Give mainLayout bounds so transportBar can display
 
     // Effect rack on right
     auto effectRackWidth = 250;
@@ -613,6 +617,32 @@ AudioTrack* MainComponent::getAudioTrackById(const juce::Uuid& id)
         }
     }
     return nullptr;
+}
+
+bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* /*originatingComponent*/)
+{
+    // Space = Play/Pause toggle
+    if (key == juce::KeyPress::spaceKey)
+    {
+        transport.togglePlayPause();
+        return true;
+    }
+
+    // Enter/Return = Stop
+    if (key == juce::KeyPress::returnKey)
+    {
+        transport.stop();
+        return true;
+    }
+
+    // Home = Go to start
+    if (key == juce::KeyPress::homeKey)
+    {
+        transport.setPosition(0.0);
+        return true;
+    }
+
+    return false;
 }
 
 void MainComponent::updateTitle()

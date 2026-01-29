@@ -17,7 +17,8 @@
 
 class MainComponent : public juce::Component,
                       public juce::FileDragAndDropTarget,
-                      public juce::MenuBarModel
+                      public juce::MenuBarModel,
+                      public juce::KeyListener
 {
 public:
     MainComponent();
@@ -34,6 +35,9 @@ public:
     juce::StringArray getMenuBarNames() override;
     juce::PopupMenu getMenuForIndex(int menuIndex, const juce::String& menuName) override;
     void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+
+    // Keyboard shortcuts
+    bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
 
 private:
     void newProject();
