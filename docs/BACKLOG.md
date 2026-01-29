@@ -68,6 +68,23 @@
 
 ---
 
+## 🎨 Phase 5 : UI/UX Pro-Level ✅
+
+### Sprint 13 — Theme & Visual Overhaul ✅
+- [x] Theme system (Shadows, Gradients, TrackColours, Glow namespaces)
+- [x] DrawingHelpers utilities (shadow, glow, gradient rendering)
+- [x] ModernLookAndFeel (beveled buttons, enhanced knobs)
+- [x] LED-style VU meters (24 segments, FL Studio style)
+- [x] Gradient waveforms (per-track colors)
+- [x] ClipComponent polish (shadows, gradient bg, header dark)
+- [x] TransportBar (inner shadow, time display glow)
+- [x] EffectSlotComponent (shadow, header gradient, bypass glow)
+- [x] ModalOverlay (animated backdrop, vignette)
+- [x] FirstRunDialog (gradient, accent bar glow)
+- [x] CI/CD GitHub Actions (Linux + Windows builds)
+
+---
+
 ## 💡 Ideas (Backlog Long Terme)
 
 - [ ] Piano roll / MIDI editor

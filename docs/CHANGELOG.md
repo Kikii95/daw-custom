@@ -53,6 +53,39 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — UI/UX Pro-Level Overhaul (Sprint 13)
+
+**Theme System Enhancement**
+- AppTheme.h: +Shadows (sm, md, lg), +Gradients, +TrackColours (12-color palette), +Glow
+- DrawingHelpers.h/cpp: Reusable shadow, glow, gradient, beveled button rendering
+
+**ModernLookAndFeel Enhancement**
+- Buttons: Beveled 3D effect with gradient, shadow, top highlight, hover glow
+- Rotary sliders: Multi-layer glow, gradient knob center
+- ComboBox/PopupMenu: Shadows and gradients
+
+**Mixer & Meters (FL Studio style)**
+- MeterComponent: LED-style 24-segment meters with gradient lit segments
+- Peak hold indicator with glow effect
+- ChannelStrip: Drop shadows, gradient backgrounds, color bar with glow, selection glow
+
+**Waveforms & Timeline**
+- WaveformDisplay: Gradient waveform rendering with per-track colors
+- Path-based rendering with top highlight
+- ClipComponent: Drop shadow, gradient background, darker header band, selection glow
+
+**Transport & Effects**
+- TransportBar: Inner shadow, time display glow, accent bottom line
+- EffectSlotComponent: Drop shadow, header gradient, bypass/active glow indicators
+
+**Modals**
+- ModalOverlay: Animated backdrop with vignette, shadow, glow effects
+- FirstRunDialog: Gradient background, accent bar glow, top highlight
+
+**CI/CD**
+- GitHub Actions workflow: Linux + Windows builds
+- Artifact upload for release binaries
+
 ### Added — Phase 2 Sprint 6 (Effects Core)
 
 **DSP Architecture**

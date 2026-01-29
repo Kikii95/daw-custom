@@ -63,14 +63,28 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 
 ---
 
-## Q3 2026 — Polish
+## Q1 2026 — UI/UX Overhaul ✅
 
-### Juillet-Août
-- [ ] UI polish & themes
-- [ ] Project save/load
+### Janvier (FAIT)
+- [x] **Sprint 13 : Pro-Level UI/UX** ✅
+  - Theme system (Shadows, Gradients, TrackColours, Glow)
+  - DrawingHelpers utilities
+  - LED-style VU meters (FL Studio)
+  - Gradient waveforms with per-track colors
+  - Beveled 3D buttons, enhanced knobs
+  - Modal overlay with animations
+  - CI/CD GitHub Actions (Linux + Windows)
+
+---
+
+## Q2-Q3 2026 — Polish
+
+### Février-Mars
+- [ ] Project save/load (JSON serialization)
+- [ ] Preset system (effects + synths)
 - [ ] Undo/redo
 
-### Septembre
+### Avril-Juin
 - [ ] Beta release v1.0
 - [ ] Documentation utilisateur
 
