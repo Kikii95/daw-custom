@@ -58,7 +58,7 @@ void ClipComponent::paint(juce::Graphics& g)
                juce::Justification::centredLeft,
                true);
 
-    // Selection glow
+    // Selection or hover glow
     if (selected)
     {
         DrawingHelpers::drawGlow(g, bounds.reduced(1), Theme::Colours::accent(),
@@ -66,6 +66,15 @@ void ClipComponent::paint(juce::Graphics& g)
 
         g.setColour(Theme::Colours::accent());
         g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadiusSm, 2.0f);
+    }
+    else if (hovered)
+    {
+        // Subtle hover glow
+        DrawingHelpers::drawGlow(g, bounds.reduced(1), clipData.colour.brighter(0.3f),
+                                  Theme::Glow::radiusSmall, Theme::Glow::intensitySubtle);
+
+        g.setColour(clipData.colour.brighter(0.2f));
+        g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadiusSm, 1.5f);
     }
     else
     {
@@ -94,6 +103,10 @@ void ClipComponent::setClipData(const Clip& clip)
     auto bottomColour = Theme::TrackColours::getWaveformBottom(clip.colour);
     waveformDisplay.setGradientColours(topColour, bottomColour);
     waveformDisplay.setBackgroundColour(clip.colour.darker(0.6f).withAlpha(0.3f));
+
+    // Set tooltip with name and duration
+    juce::String tooltip = clip.name + " (" + juce::String(clip.duration, 1) + "s)";
+    setTooltip(tooltip);
 
     repaint();
 }
@@ -144,4 +157,16 @@ void ClipComponent::mouseDrag(const juce::MouseEvent& e)
 void ClipComponent::mouseUp(const juce::MouseEvent& /*e*/)
 {
     dragging = false;
+}
+
+void ClipComponent::mouseEnter(const juce::MouseEvent& /*e*/)
+{
+    hovered = true;
+    repaint();
+}
+
+void ClipComponent::mouseExit(const juce::MouseEvent& /*e*/)
+{
+    hovered = false;
+    repaint();
 }

@@ -22,14 +22,17 @@ void AudioEngine::initialise(int numInputChannels, int numOutputChannels)
         return;
     }
 
-    sourcePlayer.setSource(this);
-    deviceManager.addAudioCallback(&sourcePlayer);
-
+    // FIX: Get sample rate BEFORE setting up audio callback
+    // This ensures prepareToPlay() can be called correctly
     if (auto* device = deviceManager.getCurrentAudioDevice())
     {
         currentSampleRate = device->getCurrentSampleRate();
         currentBlockSize = device->getCurrentBufferSizeSamples();
     }
+
+    // Now set up the audio chain with valid sample rate
+    sourcePlayer.setSource(this);
+    deviceManager.addAudioCallback(&sourcePlayer);
 
     initialised = true;
     DBG("AudioEngine initialised: " + juce::String(currentSampleRate) + " Hz, " +
@@ -79,8 +82,22 @@ void AudioEngine::setSource(juce::AudioSource* newSource)
 {
     currentSource = newSource;
 
-    if (currentSource != nullptr && currentSampleRate > 0)
-        currentSource->prepareToPlay(currentBlockSize, currentSampleRate);
+    if (currentSource != nullptr)
+    {
+        // Fallback: get sample rate from device if not set yet
+        if (currentSampleRate <= 0)
+        {
+            if (auto* device = deviceManager.getCurrentAudioDevice())
+            {
+                currentSampleRate = device->getCurrentSampleRate();
+                currentBlockSize = device->getCurrentBufferSizeSamples();
+            }
+        }
+
+        // Prepare source if we have valid audio settings
+        if (currentSampleRate > 0)
+            currentSource->prepareToPlay(currentBlockSize, currentSampleRate);
+    }
 }
 
 void AudioEngine::clearSource()

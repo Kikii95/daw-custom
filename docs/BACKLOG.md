@@ -106,6 +106,19 @@
 
 ---
 
+## 🛠️ Phase 7 : UX Fixes ✅
+
+### Sprint 15 — UX Audit & Fixes ✅
+- [x] Fix AudioEngine initialization race condition
+- [x] Auto-select first track on startup
+- [x] Wire effect callbacks (onEffectAdded/Removed/Bypass/Parameter)
+- [x] Track selection in Timeline (mouseDown + highlight)
+- [x] Timeline↔Mixer selection sync
+- [x] Clip tooltips (name + duration)
+- [x] Clip hover effect (subtle glow)
+
+---
+
 ## 💡 Ideas (Backlog Long Terme)
 
 - [ ] Piano roll / MIDI editor

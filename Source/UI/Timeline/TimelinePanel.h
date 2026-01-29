@@ -55,6 +55,9 @@ public:
     // Refresh track lanes from project
     void refreshTracks();
 
+    // Callbacks
+    std::function<void(juce::Uuid)> onTrackSelected;
+
 private:
     void updateVisibleRange();
 

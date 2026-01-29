@@ -4,7 +4,8 @@
 #include "Model/Clip.h"
 #include "UI/Waveform/WaveformDisplay.h"
 
-class ClipComponent : public juce::Component
+class ClipComponent : public juce::Component,
+                      public juce::SettableTooltipClient
 {
 public:
     ClipComponent();
@@ -28,6 +29,8 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseEnter(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     // Callback for drag
     std::function<void(ClipComponent*, double)> onDrag;
@@ -37,6 +40,7 @@ private:
     Clip clipData;
     WaveformDisplay waveformDisplay;
     bool selected = false;
+    bool hovered = false;
     bool dragging = false;
 
     juce::Point<int> dragStart;

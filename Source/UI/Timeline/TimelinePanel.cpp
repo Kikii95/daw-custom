@@ -181,6 +181,18 @@ void TimelinePanel::refreshTracks()
         lane->setFormatManager(formatManager);
         lane->setWaveformCache(&waveformCache);
 
+        // Wire track selection
+        lane->onTrackSelected = [this](TrackLane* selectedLane)
+        {
+            // Deselect all tracks
+            for (auto& l : trackLanes)
+                l->setSelected(l.get() == selectedLane);
+
+            // Notify parent
+            if (onTrackSelected)
+                onTrackSelected(selectedLane->getTrackData().id);
+        };
+
         // Add clips
         for (const auto& clip : track.clips)
         {

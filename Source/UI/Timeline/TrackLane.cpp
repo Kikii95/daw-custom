@@ -14,9 +14,16 @@ void TrackLane::paint(juce::Graphics& g)
     // Track background
     g.fillAll(Theme::colour(Theme::bgSlot));
 
+    // Selection highlight
+    if (selected)
+    {
+        g.setColour(Theme::Colours::accent().withAlpha(0.15f));
+        g.fillRect(getLocalBounds());
+    }
+
     // Header area
     auto headerArea = getLocalBounds().removeFromLeft(headerWidth);
-    g.setColour(trackData.colour.withAlpha(0.3f));
+    g.setColour(trackData.colour.withAlpha(selected ? 0.5f : 0.3f));
     g.fillRect(headerArea);
 
     // Track name
@@ -142,6 +149,13 @@ void TrackLane::layoutClips()
     }
 }
 
+void TrackLane::mouseDown(const juce::MouseEvent& /*e*/)
+{
+    // Select this track when clicked anywhere
+    if (onTrackSelected)
+        onTrackSelected(this);
+}
+
 void TrackLane::mouseDoubleClick(const juce::MouseEvent& e)
 {
     // Check if double-click is in header area (track name zone)
@@ -149,6 +163,15 @@ void TrackLane::mouseDoubleClick(const juce::MouseEvent& e)
     if (headerArea.contains(e.getPosition()))
     {
         showNameEditor();
+    }
+}
+
+void TrackLane::setSelected(bool shouldBeSelected)
+{
+    if (selected != shouldBeSelected)
+    {
+        selected = shouldBeSelected;
+        repaint();
     }
 }
 

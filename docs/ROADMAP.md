@@ -85,6 +85,17 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 
 ---
 
+## Q1 2026 — UX Fixes ✅
+
+### Janvier
+- [x] **Sprint 15 : UX Audit & Fixes** ✅
+  - Fix AudioEngine race condition
+  - Track selection in Timeline + sync
+  - Clip tooltips + hover effects
+  - Auto-select first track
+
+---
+
 ## Q2-Q3 2026 — Polish
 
 ### Février-Mars

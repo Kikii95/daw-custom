@@ -334,10 +334,21 @@ void MainComponent::exportMix()
 void MainComponent::addTrack()
 {
     auto& track = project->addTrack();
-    mixer->addTrack();
+    auto* audioTrack = mixer->addTrack();
+
+    // Link AudioTrack to project Track data
+    if (audioTrack != nullptr)
+        audioTrack->setTrackData(track);
 
     timelinePanel.refreshTracks();
     mixerPanel.refreshChannels();
+
+    // Auto-select first track so effect rack is populated
+    if (project->getNumTracks() == 1 && audioTrack != nullptr)
+    {
+        mixerPanel.selectTrack(track.id);
+        effectRackPanel.setTrack(audioTrack);
+    }
 
     project->setModified(true);
     updateTitle();
@@ -417,6 +428,37 @@ void MainComponent::connectCallbacks()
     {
         if (auto* audioTrack = getAudioTrackById(trackId))
             effectRackPanel.setTrack(audioTrack);
+    };
+
+    // Timeline track selection - sync with mixer and effect rack
+    timelinePanel.onTrackSelected = [this](juce::Uuid trackId)
+    {
+        mixerPanel.selectTrack(trackId);
+        if (auto* audioTrack = getAudioTrackById(trackId))
+            effectRackPanel.setTrack(audioTrack);
+    };
+
+    // Effect rack callbacks
+    effectRackPanel.onEffectAdded = [this](juce::Uuid /*trackId*/, int /*index*/)
+    {
+        project->setModified(true);
+        updateTitle();
+    };
+
+    effectRackPanel.onEffectRemoved = [this](juce::Uuid /*trackId*/, int /*index*/)
+    {
+        project->setModified(true);
+        updateTitle();
+    };
+
+    effectRackPanel.onEffectBypassChanged = [this](juce::Uuid /*trackId*/, int /*index*/, bool /*bypassed*/)
+    {
+        project->setModified(true);
+    };
+
+    effectRackPanel.onEffectParameterChanged = [this](juce::Uuid /*trackId*/, int /*index*/, int /*paramIndex*/, float /*value*/)
+    {
+        project->setModified(true);
     };
 }
 

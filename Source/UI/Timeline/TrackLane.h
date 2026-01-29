@@ -19,6 +19,7 @@ public:
     void resized() override;
 
     // Mouse handling
+    void mouseDown(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
 
     // Track data
@@ -35,12 +36,17 @@ public:
     void addClipComponent(const Clip& clipData, juce::AudioThumbnail* thumbnail);
     void clearClips();
 
-    // Selection
+    // Clip selection
     ClipComponent* getSelectedClip() const { return selectedClip; }
+
+    // Track selection
+    bool isSelected() const { return selected; }
+    void setSelected(bool shouldBeSelected);
 
     // Callbacks
     std::function<void(TrackLane*, ClipComponent*)> onClipSelected;
     std::function<void(TrackLane*, const juce::String&)> onTrackRenamed;
+    std::function<void(TrackLane*)> onTrackSelected;
 
     // Waveform cache access
     void setWaveformCache(WaveformCache* cache) { waveformCache = cache; }
@@ -60,6 +66,7 @@ private:
     Track trackData;
     std::vector<std::unique_ptr<ClipComponent>> clipComponents;
     ClipComponent* selectedClip = nullptr;
+    bool selected = false;
 
     WaveformCache* waveformCache = nullptr;
     juce::AudioFormatManager* formatManager = nullptr;

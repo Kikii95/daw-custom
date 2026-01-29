@@ -53,6 +53,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — UX Audit (Sprint 15)
+- **Audio playback race condition**: Fixed initialization order in AudioEngine — sample rate now obtained before audio callback setup
+- **Track selection Timeline**: Added mouseDown() to TrackLane with selection highlight
+- **Timeline↔Mixer sync**: Track selection in timeline now syncs with mixer and effect rack
+
+### Added — UX Improvements (Sprint 15)
+- **Auto-select first track**: First track auto-selected on startup, effect rack populated
+- **Clip tooltips**: Hover clips shows name + duration (via SettableTooltipClient)
+- **Clip hover effect**: Subtle glow on clip hover
+- **Effect callbacks wired**: onEffectAdded/Removed/Bypass/Parameter connected in MainComponent
+
 ### Fixed — Core Functionality (Sprint 14)
 - Audio playback: Buffer now properly loaded into AudioClip and added to AudioTrack
 - Track renaming: Double-click on track header to edit name inline
