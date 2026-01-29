@@ -1,84 +1,185 @@
-name: Build
+name: CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     tags: ['v*']
   pull_request:
     branches: [main]
 
+env:
+  BUILD_TYPE: Release
+
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure CMake
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64
-
-      - name: Build
-        run: cmake --build build --config Release --parallel
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: DAWCustom-Windows
-          path: build/DAWCustom_artefacts/Release/
-
-  build-linux:
+  # ==========================================================================
+  # Linux Build + Tests
+  # ==========================================================================
+  linux:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: |
+            build
+            ~/.cache/ccache
+          key: linux-cmake-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: |
+            linux-cmake-${{ hashFiles('CMakeLists.txt') }}-
+            linux-cmake-
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake \
-            libasound2-dev libjack-jackd2-dev \
+          sudo apt-get install -y build-essential cmake ccache \
+            libasound2-dev libjack-jackd2-dev ladspa-sdk \
             libfreetype6-dev libx11-dev libxcomposite-dev \
             libxcursor-dev libxext-dev libxinerama-dev \
-            libxrandr-dev libxrender-dev
+            libxrandr-dev libxrender-dev libglu1-mesa-dev \
+            mesa-common-dev
 
       - name: Configure CMake
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DBUILD_TESTS=ON
 
       - name: Build
-        run: cmake --build build -j$(nproc)
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} -j$(nproc)
+
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure -C ${{ env.BUILD_TYPE }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: DAWCustom-Linux
-          path: build/DAWCustom_artefacts/Release/
+          path: build/DAWCustom_artefacts/${{ env.BUILD_TYPE }}/
+          if-no-files-found: warn
 
+  # ==========================================================================
+  # Windows Build
+  # ==========================================================================
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: windows-cmake-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: |
+            windows-cmake-${{ hashFiles('CMakeLists.txt') }}-
+            windows-cmake-
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A x64 `
+            -DBUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure -C ${{ env.BUILD_TYPE }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAWCustom-Windows
+          path: build/DAWCustom_artefacts/${{ env.BUILD_TYPE }}/
+          if-no-files-found: warn
+
+  # ==========================================================================
+  # macOS Build
+  # ==========================================================================
+  macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: macos-cmake-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: |
+            macos-cmake-${{ hashFiles('CMakeLists.txt') }}-
+            macos-cmake-
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DBUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} -j$(sysctl -n hw.ncpu)
+
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure -C ${{ env.BUILD_TYPE }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAWCustom-macOS
+          path: build/DAWCustom_artefacts/${{ env.BUILD_TYPE }}/
+          if-no-files-found: warn
+
+  # ==========================================================================
+  # Release (on tags)
+  # ==========================================================================
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build-windows, build-linux]
+    needs: [linux, windows, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    steps:
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: DAWCustom-Windows
-          path: windows-build
 
+    steps:
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
           name: DAWCustom-Linux
           path: linux-build
 
-      - name: Create zip files
-        run: |
-          cd windows-build && zip -r ../DAWCustom-Windows.zip . && cd ..
-          cd linux-build && zip -r ../DAWCustom-Linux.zip . && cd ..
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DAWCustom-Windows
+          path: windows-build
 
-      - name: Create Release
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DAWCustom-macOS
+          path: macos-build
+
+      - name: Create archives
+        run: |
+          cd linux-build && zip -r ../DAWCustom-Linux.zip . && cd ..
+          cd windows-build && zip -r ../DAWCustom-Windows.zip . && cd ..
+          cd macos-build && zip -r ../DAWCustom-macOS.zip . && cd ..
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            DAWCustom-Windows.zip
             DAWCustom-Linux.zip
+            DAWCustom-Windows.zip
+            DAWCustom-macOS.zip
           generate_release_notes: true
