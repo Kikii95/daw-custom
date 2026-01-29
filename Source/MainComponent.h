@@ -11,6 +11,7 @@
 #include "UI/Timeline/TimelinePanel.h"
 #include "UI/Mixer/MixerPanel.h"
 #include "UI/Effects/EffectRackPanel.h"
+#include "UI/Theme/ModernLookAndFeel.h"
 #include <memory>
 
 class MainComponent : public juce::Component,
@@ -54,6 +55,9 @@ private:
 
     // Project
     std::unique_ptr<Project> project;
+
+    // Theme
+    ModernLookAndFeel modernLookAndFeel;
 
     // UI
     juce::MenuBarComponent menuBar;

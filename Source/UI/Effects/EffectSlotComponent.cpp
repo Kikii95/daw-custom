@@ -1,11 +1,15 @@
 #include "EffectSlotComponent.h"
+#include "UI/Plugins/PluginEditorWindow.h"
+#include "UI/Theme/AppTheme.h"
 
+// Legacy colours - will be replaced by Theme:: in Sprint 2
 namespace Colours
 {
     constexpr juce::uint32 background = 0xff2a2a2a;
     constexpr juce::uint32 headerBg = 0xff333333;
     constexpr juce::uint32 bypassOff = 0xff424242;
     constexpr juce::uint32 bypassOn = 0xffff9800;
+    constexpr juce::uint32 editBtn = 0xff2196f3;  // Blue accent
     constexpr juce::uint32 removeBtn = 0xfff44336;
     constexpr juce::uint32 knobAccent = 0xff64b5f6;
     constexpr juce::uint32 textPrimary = 0xffffffff;
@@ -34,6 +38,25 @@ EffectSlotComponent::EffectSlotComponent()
         }
     };
     addAndMakeVisible(bypassButton);
+
+    // Edit button - only visible for VST3 plugins
+    editButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Colours::editBtn));
+    editButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Colours::textPrimary));
+    editButton.onClick = [this]()
+    {
+        // Open VST3 plugin editor window
+        if (isVST3Effect && effectSlot)
+        {
+            if (auto* vst3Slot = dynamic_cast<VST3EffectSlot*>(effectSlot))
+            {
+                PluginEditorWindow::getOrCreateWindow(vst3Slot);
+            }
+        }
+        if (onEditClicked)
+            onEditClicked(effectIndex);
+    };
+    editButton.setVisible(false);  // Hidden by default, shown for VST3
+    addAndMakeVisible(editButton);
 
     removeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Colours::removeBtn));
     removeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Colours::textPrimary));
@@ -76,6 +99,14 @@ void EffectSlotComponent::resized()
     auto header = bounds.removeFromTop(headerHeight - padding * 2);
     removeButton.setBounds(header.removeFromRight(28));
     header.removeFromRight(4);
+
+    // Edit button (only for VST3)
+    if (isVST3Effect)
+    {
+        editButton.setBounds(header.removeFromRight(40));
+        header.removeFromRight(4);
+    }
+
     bypassButton.setBounds(header.removeFromRight(40));
     header.removeFromRight(8);
     nameLabel.setBounds(header);
@@ -116,6 +147,10 @@ void EffectSlotComponent::setEffect(EffectSlot* slot, int index)
 {
     effectSlot = slot;
     effectIndex = index;
+
+    // Check if this is a VST3 plugin
+    isVST3Effect = (dynamic_cast<VST3EffectSlot*>(slot) != nullptr);
+    editButton.setVisible(isVST3Effect);
 
     if (slot)
     {

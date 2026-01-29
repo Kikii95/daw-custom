@@ -4,6 +4,10 @@
 
 MainComponent::MainComponent()
 {
+    // Apply custom look and feel
+    setLookAndFeel(&modernLookAndFeel);
+    juce::LookAndFeel::setDefaultLookAndFeel(&modernLookAndFeel);
+
     // Initialize plugin manager (singleton)
     PluginManager::getInstance().initialize();
 
@@ -54,6 +58,9 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
+    // Clear look and feel before destruction
+    setLookAndFeel(nullptr);
+
     // Close all plugin editor windows
     PluginEditorWindow::closeAllWindows();
 
@@ -246,10 +253,19 @@ void MainComponent::saveProjectAs()
 
 void MainComponent::importAudioFile()
 {
+    // Build wildcard pattern: "*.wav;*.mp3;*.flac;..."
+    juce::String wildcards;
+    for (const auto& ext : fileLoader.getSupportedExtensions())
+    {
+        if (wildcards.isNotEmpty())
+            wildcards += ";";
+        wildcards += "*" + ext;  // ext already has the dot (e.g. ".wav")
+    }
+
     auto chooser = std::make_shared<juce::FileChooser>(
         "Import Audio File",
         juce::File::getSpecialLocation(juce::File::userMusicDirectory),
-        fileLoader.getSupportedExtensions().joinIntoString(";")
+        wildcards
     );
 
     chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,

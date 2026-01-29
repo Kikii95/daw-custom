@@ -90,6 +90,16 @@ target_sources(DAWCustom
         # UI - Plugins
         Source/UI/Plugins/PluginEditorWindow.cpp
         Source/UI/Plugins/GenericPluginEditor.cpp
+        Source/UI/Plugins/PluginBrowser.cpp
+
+        # UI - Theme
+        Source/UI/Theme/ModernLookAndFeel.cpp
+
+        # UI - Layout
+        Source/UI/Layout/FlexPanel.cpp
+
+        # UI - Dialogs
+        Source/UI/Dialogs/FirstRunDialog.cpp
 
         # Utils
         Source/Utils/Tweens.cpp

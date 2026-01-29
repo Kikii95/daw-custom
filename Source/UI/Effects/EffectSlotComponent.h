@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Audio/DSP/EffectSlot.h"
+#include "Audio/Plugins/VST3EffectSlot.h"
 #include <functional>
 #include <vector>
 #include <memory>
@@ -28,6 +29,7 @@ public:
     std::function<void(int, bool)> onBypassChanged;
     std::function<void(int, int, float)> onParameterChanged;
     std::function<void(int)> onRemoveClicked;
+    std::function<void(int)> onEditClicked;  // For VST3 plugin UI
 
     // Height calculation for layout
     int getPreferredHeight() const;
@@ -42,7 +44,10 @@ private:
     // Header controls
     juce::Label nameLabel;
     juce::TextButton bypassButton { "BYP" };
+    juce::TextButton editButton { "Edit" };  // Shows only for VST3 plugins
     juce::TextButton removeButton { "X" };
+
+    bool isVST3Effect = false;
 
     // Dynamic parameter controls
     struct ParamControl
