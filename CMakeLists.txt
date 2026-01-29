@@ -94,12 +94,14 @@ target_sources(DAWCustom
 
         # UI - Theme
         Source/UI/Theme/ModernLookAndFeel.cpp
+        Source/UI/Theme/DrawingHelpers.cpp
 
         # UI - Layout
         Source/UI/Layout/FlexPanel.cpp
 
         # UI - Dialogs
         Source/UI/Dialogs/FirstRunDialog.cpp
+        Source/UI/Dialogs/ModalOverlay.cpp
 
         # Utils
         Source/Utils/Tweens.cpp

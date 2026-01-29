@@ -96,9 +96,5 @@ public:
                      int width, int height) override;
 
 private:
-    // Helper to draw glow effect
-    void drawGlow(juce::Graphics& g, juce::Rectangle<float> bounds,
-                  juce::Colour colour, float radius);
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModernLookAndFeel)
 };

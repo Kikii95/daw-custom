@@ -1,4 +1,5 @@
 #include "FirstRunDialog.h"
+#include "UI/Theme/DrawingHelpers.h"
 
 //=============================================================================
 // FirstRunDialog
@@ -71,11 +72,35 @@ FirstRunDialog::FirstRunDialog()
 
 void FirstRunDialog::paint(juce::Graphics& g)
 {
-    g.fillAll(Theme::colour(Theme::bgPanel));
+    auto bounds = getLocalBounds().toFloat();
 
-    // Decorative top bar
-    g.setColour(Theme::Colours::accent());
-    g.fillRect(0, 0, getWidth(), 4);
+    // Background gradient
+    auto bgGradient = juce::ColourGradient(
+        Theme::colour(Theme::bgPanel).brighter(0.05f), bounds.getX(), bounds.getY(),
+        Theme::colour(Theme::bgPanel).darker(0.08f), bounds.getX(), bounds.getBottom(),
+        false);
+    g.setGradientFill(bgGradient);
+    g.fillRoundedRectangle(bounds, Theme::cornerRadius);
+
+    // Decorative top accent bar with gradient
+    auto accentBar = bounds.removeFromTop(6);
+    auto accentGradient = juce::ColourGradient(
+        Theme::Colours::accent().brighter(0.2f), accentBar.getX(), accentBar.getCentreY(),
+        Theme::Colours::accent().darker(0.1f), accentBar.getRight(), accentBar.getCentreY(),
+        false);
+    g.setGradientFill(accentGradient);
+    g.fillRoundedRectangle(accentBar.withTrimmedBottom(-4), Theme::cornerRadius);
+
+    // Accent bar glow
+    DrawingHelpers::drawGlow(g, accentBar, Theme::Colours::accent(),
+                              Theme::Glow::radiusMedium, Theme::Glow::intensityNormal);
+
+    // Top highlight
+    DrawingHelpers::drawTopHighlight(g, getLocalBounds().toFloat(), Theme::cornerRadius, 0.06f);
+
+    // Subtle border
+    g.setColour(Theme::colour(Theme::border).withAlpha(0.5f));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), Theme::cornerRadius, 1.0f);
 }
 
 void FirstRunDialog::resized()

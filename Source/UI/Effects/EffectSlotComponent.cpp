@@ -1,6 +1,7 @@
 #include "EffectSlotComponent.h"
 #include "UI/Plugins/PluginEditorWindow.h"
 #include "UI/Theme/AppTheme.h"
+#include "UI/Theme/DrawingHelpers.h"
 
 EffectSlotComponent::EffectSlotComponent()
 {
@@ -64,20 +65,53 @@ EffectSlotComponent::~EffectSlotComponent()
 
 void EffectSlotComponent::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds();
+    auto bounds = getLocalBounds().toFloat();
 
-    // Background
-    g.setColour(Theme::colour(Theme::bgSlot));
-    g.fillRoundedRectangle(bounds.toFloat(), Theme::cornerRadius);
+    // Drop shadow
+    DrawingHelpers::drawShadow(g, bounds, Theme::Shadows::sm, Theme::cornerRadius);
 
-    // Header background
-    auto headerBounds = bounds.removeFromTop(headerHeight);
-    g.setColour(Theme::colour(Theme::bgHover));
-    g.fillRoundedRectangle(headerBounds.toFloat().withTrimmedBottom(2), Theme::cornerRadius);
+    auto innerBounds = bounds.reduced(1);
 
-    // Outline
-    g.setColour(Theme::colour(Theme::border));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), Theme::cornerRadius, 1.0f);
+    // Background gradient
+    auto bgGradient = juce::ColourGradient(
+        Theme::colour(Theme::bgSlot).brighter(0.05f), innerBounds.getX(), innerBounds.getY(),
+        Theme::colour(Theme::bgSlot).darker(0.05f), innerBounds.getX(), innerBounds.getBottom(),
+        false);
+    g.setGradientFill(bgGradient);
+    g.fillRoundedRectangle(innerBounds, Theme::cornerRadius);
+
+    // Header area with gradient
+    auto headerBounds = innerBounds.removeFromTop(static_cast<float>(headerHeight));
+    auto headerGradient = juce::ColourGradient(
+        Theme::colour(Theme::bgHover).brighter(0.08f), headerBounds.getX(), headerBounds.getY(),
+        Theme::colour(Theme::bgHover).darker(0.05f), headerBounds.getX(), headerBounds.getBottom(),
+        false);
+    g.setGradientFill(headerGradient);
+    g.fillRoundedRectangle(headerBounds.withTrimmedBottom(-4), Theme::cornerRadius);
+
+    // Top highlight
+    DrawingHelpers::drawTopHighlight(g, bounds.reduced(1), Theme::cornerRadius, 0.08f);
+
+    // Bypass glow when effect is active (not bypassed)
+    bool isBypassed = effectSlot ? effectSlot->isBypassed() : false;
+    if (effectSlot && !isBypassed)
+    {
+        // Active effect glow
+        DrawingHelpers::drawGlow(g, bounds.reduced(1), Theme::Colours::accent(),
+                                  Theme::Glow::radiusSmall, Theme::Glow::intensitySubtle * 0.6f);
+    }
+    else if (isBypassed)
+    {
+        // Bypassed indicator - dim orange glow
+        DrawingHelpers::drawGlow(g, bounds.reduced(1), Theme::Colours::warning(),
+                                  Theme::Glow::radiusSmall, Theme::Glow::intensitySubtle * 0.3f);
+    }
+
+    // Border
+    g.setColour(effectSlot && !isBypassed
+                ? Theme::Colours::accent().withAlpha(0.4f)
+                : Theme::colour(Theme::border));
+    g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadius, 1.0f);
 }
 
 void EffectSlotComponent::resized()

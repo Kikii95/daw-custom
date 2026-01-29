@@ -1,5 +1,6 @@
 #include "ClipComponent.h"
 #include "UI/Theme/AppTheme.h"
+#include "UI/Theme/DrawingHelpers.h"
 
 ClipComponent::ClipComponent()
 {
@@ -14,28 +15,64 @@ void ClipComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
-    // Clip background
-    g.setColour(clipData.colour.withAlpha(0.8f));
-    g.fillRoundedRectangle(bounds, Theme::cornerRadiusSm);
+    // Drop shadow
+    DrawingHelpers::drawShadow(g, bounds,
+                                selected ? Theme::Shadows::md : Theme::Shadows::sm,
+                                Theme::cornerRadiusSm);
 
-    // Selection highlight
-    if (selected)
-    {
-        g.setColour(Theme::Colours::accent().withAlpha(0.5f));
-        g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadiusSm, 2.0f);
-    }
+    auto innerBounds = bounds.reduced(1);
 
-    // Clip name
-    g.setColour(Theme::Colours::text());
-    g.setFont(11.0f);
+    // Background gradient
+    auto bgGradient = juce::ColourGradient(
+        clipData.colour.brighter(0.15f), innerBounds.getX(), innerBounds.getY(),
+        clipData.colour.darker(0.2f), innerBounds.getX(), innerBounds.getBottom(),
+        false);
+    g.setGradientFill(bgGradient);
+    g.fillRoundedRectangle(innerBounds, Theme::cornerRadiusSm);
+
+    // Darker header band (top 18px)
+    auto headerBounds = innerBounds.removeFromTop(18);
+    g.setColour(juce::Colours::black.withAlpha(0.25f));
+    g.fillRoundedRectangle(headerBounds.withTrimmedBottom(-4), Theme::cornerRadiusSm);
+
+    // Top highlight line (beveled effect)
+    g.setColour(juce::Colours::white.withAlpha(0.1f));
+    g.drawHorizontalLine(static_cast<int>(bounds.getY() + 2),
+                         bounds.getX() + 4, bounds.getRight() - 4);
+
+    // Clip name with subtle text shadow
+    auto textBounds = bounds.reduced(4, 2).removeFromTop(16);
+    g.setFont(juce::Font(11.0f, juce::Font::bold));
+
+    // Text shadow
+    g.setColour(juce::Colours::black.withAlpha(0.5f));
     g.drawText(clipData.name,
-               bounds.reduced(4, 2).removeFromTop(16),
+               textBounds.translated(1, 1),
                juce::Justification::centredLeft,
                true);
 
-    // Border
-    g.setColour(clipData.colour.darker(0.3f));
-    g.drawRoundedRectangle(bounds, Theme::cornerRadiusSm, 1.0f);
+    // Text
+    g.setColour(Theme::Colours::text());
+    g.drawText(clipData.name,
+               textBounds,
+               juce::Justification::centredLeft,
+               true);
+
+    // Selection glow
+    if (selected)
+    {
+        DrawingHelpers::drawGlow(g, bounds.reduced(1), Theme::Colours::accent(),
+                                  Theme::Glow::radiusMedium, Theme::Glow::intensityNormal);
+
+        g.setColour(Theme::Colours::accent());
+        g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadiusSm, 2.0f);
+    }
+    else
+    {
+        // Subtle border
+        g.setColour(clipData.colour.darker(0.4f));
+        g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadiusSm, 1.0f);
+    }
 }
 
 void ClipComponent::resized()
@@ -51,12 +88,24 @@ void ClipComponent::setClipData(const Clip& clip)
     clipData = clip;
     waveformDisplay.setVisibleRange(clip.sourceStartOffset,
                                      clip.sourceStartOffset + clip.duration);
+
+    // Update waveform gradient colors based on clip color
+    auto topColour = Theme::TrackColours::getWaveformTop(clip.colour);
+    auto bottomColour = Theme::TrackColours::getWaveformBottom(clip.colour);
+    waveformDisplay.setGradientColours(topColour, bottomColour);
+    waveformDisplay.setBackgroundColour(clip.colour.darker(0.6f).withAlpha(0.3f));
+
     repaint();
 }
 
 void ClipComponent::setThumbnail(juce::AudioThumbnail* thumb)
 {
     waveformDisplay.setThumbnail(thumb);
+
+    // Set gradient colors based on clip color using TrackColours helpers
+    auto topColour = Theme::TrackColours::getWaveformTop(clipData.colour);
+    auto bottomColour = Theme::TrackColours::getWaveformBottom(clipData.colour);
+    waveformDisplay.setGradientColours(topColour, bottomColour);
     waveformDisplay.setWaveformColour(clipData.colour.brighter(0.3f));
 }
 

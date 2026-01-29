@@ -2,6 +2,7 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
+#include <array>
 
 namespace Theme
 {
@@ -114,5 +115,129 @@ namespace Theme
         inline juce::Colour text()           { return colour(textPrimary); }
         inline juce::Colour textMuted()      { return colour(textSecondary); }
         inline juce::Colour textDisabled()   { return colour(textDim); }
+    }
+
+    //=========================================================================
+    // SHADOWS (for depth/layering)
+    //=========================================================================
+    namespace Shadows
+    {
+        struct Shadow
+        {
+            float offsetX, offsetY, blur, spread;
+            juce::uint32 colour;
+            float alpha;
+        };
+
+        constexpr Shadow none  = { 0.0f, 0.0f, 0.0f,  0.0f, 0x000000, 0.0f };
+        constexpr Shadow sm    = { 0.0f, 1.0f, 3.0f,  0.0f, 0x000000, 0.3f };
+        constexpr Shadow md    = { 0.0f, 4.0f, 6.0f, -1.0f, 0x000000, 0.4f };
+        constexpr Shadow lg    = { 0.0f, 10.0f, 15.0f, -3.0f, 0x000000, 0.5f };
+        constexpr Shadow inner = { 0.0f, 2.0f, 4.0f,  0.0f, 0x000000, 0.25f };
+        constexpr Shadow glow  = { 0.0f, 0.0f, 15.0f, 0.0f, accentBlue, 0.4f };
+    }
+
+    //=========================================================================
+    // GRADIENTS (for panels, buttons, headers)
+    //=========================================================================
+    namespace Gradients
+    {
+        inline juce::ColourGradient panel(juce::Rectangle<float> bounds)
+        {
+            return juce::ColourGradient(
+                colour(bgPanel).brighter(0.03f), bounds.getX(), bounds.getY(),
+                colour(bgPanel).darker(0.02f), bounds.getX(), bounds.getBottom(),
+                false);
+        }
+
+        inline juce::ColourGradient header(juce::Rectangle<float> bounds)
+        {
+            return juce::ColourGradient(
+                colour(bgHeader).brighter(0.08f), bounds.getX(), bounds.getY(),
+                colour(bgHeader).darker(0.05f), bounds.getX(), bounds.getBottom(),
+                false);
+        }
+
+        inline juce::ColourGradient slot(juce::Rectangle<float> bounds)
+        {
+            return juce::ColourGradient(
+                colour(bgSlot).brighter(0.04f), bounds.getX(), bounds.getY(),
+                colour(bgSlot).darker(0.02f), bounds.getX(), bounds.getBottom(),
+                false);
+        }
+
+        inline juce::ColourGradient buttonNormal(juce::Rectangle<float> bounds, juce::Colour base)
+        {
+            return juce::ColourGradient(
+                base.brighter(0.1f), bounds.getX(), bounds.getY(),
+                base.darker(0.1f), bounds.getX(), bounds.getBottom(),
+                false);
+        }
+
+        inline juce::ColourGradient buttonPressed(juce::Rectangle<float> bounds, juce::Colour base)
+        {
+            return juce::ColourGradient(
+                base.darker(0.05f), bounds.getX(), bounds.getY(),
+                base.brighter(0.05f), bounds.getX(), bounds.getBottom(),
+                false);
+        }
+
+        inline juce::ColourGradient accent(juce::Rectangle<float> bounds, juce::Colour base)
+        {
+            return juce::ColourGradient(
+                base.brighter(0.15f), bounds.getX(), bounds.getY(),
+                base.darker(0.1f), bounds.getX(), bounds.getBottom(),
+                false);
+        }
+    }
+
+    //=========================================================================
+    // TRACK COLORS (12 preset palette for visual distinction)
+    //=========================================================================
+    namespace TrackColours
+    {
+        constexpr std::array<juce::uint32, 12> palette = {{
+            0xffE91E63,  // Pink
+            0xffF44336,  // Red
+            0xffFF9800,  // Orange
+            0xffFFEB3B,  // Yellow
+            0xff8BC34A,  // Light Green
+            0xff4CAF50,  // Green
+            0xff00BCD4,  // Cyan
+            0xff2196F3,  // Blue
+            0xff3F51B5,  // Indigo
+            0xff9C27B0,  // Purple
+            0xff795548,  // Brown
+            0xff607D8B   // Blue Grey
+        }};
+
+        inline juce::Colour getColour(int trackIndex)
+        {
+            return colour(palette[static_cast<size_t>(trackIndex) % palette.size()]);
+        }
+
+        inline juce::Colour getWaveformTop(juce::Colour baseColour)
+        {
+            return baseColour.brighter(0.3f);
+        }
+
+        inline juce::Colour getWaveformBottom(juce::Colour baseColour)
+        {
+            return baseColour.darker(0.2f).withAlpha(0.7f);
+        }
+    }
+
+    //=========================================================================
+    // GLOW EFFECTS (for selection, active states)
+    //=========================================================================
+    namespace Glow
+    {
+        constexpr float radiusSmall   = 4.0f;
+        constexpr float radiusMedium  = 8.0f;
+        constexpr float radiusLarge   = 15.0f;
+
+        constexpr float intensitySubtle = 0.2f;
+        constexpr float intensityNormal = 0.4f;
+        constexpr float intensityStrong = 0.6f;
     }
 }

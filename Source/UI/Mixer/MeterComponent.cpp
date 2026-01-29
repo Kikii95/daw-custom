@@ -1,5 +1,6 @@
 #include "MeterComponent.h"
 #include "UI/Theme/AppTheme.h"
+#include "UI/Theme/DrawingHelpers.h"
 
 MeterComponent::MeterComponent()
 {
@@ -109,45 +110,75 @@ void MeterComponent::resetPeak()
 void MeterComponent::drawMeter(juce::Graphics& g, juce::Rectangle<float> bounds,
                                 float level, float peak)
 {
+    const int numSegments = 24;
+    const float segmentGap = 1.5f;
     float height = bounds.getHeight();
+    float segmentHeight = (height - (numSegments - 1) * segmentGap) / numSegments;
 
     // Convert to dB for display
     float levelDb = linearToDecibels(level);
     float peakDb = linearToDecibels(peak);
 
-    // Clamp to display range (-60 to +6 dB)
-    float levelY = decibelsToY(levelDb, height);
-    float peakY = decibelsToY(peakDb, height);
+    // Calculate lit segments
+    int levelSegments = static_cast<int>((levelDb + 60.0f) / 66.0f * numSegments);
+    int peakSegment = static_cast<int>((peakDb + 60.0f) / 66.0f * numSegments);
 
-    // Gradient fill for level
-    juce::ColourGradient gradient(
-        Theme::colour(Theme::meterLow),   // Green at bottom
-        bounds.getX(), bounds.getBottom(),
-        Theme::colour(Theme::meterHigh),  // Red at top
-        bounds.getX(), bounds.getY(),
-        false
-    );
-    gradient.addColour(0.7, Theme::colour(Theme::meterMid));  // Yellow in middle
+    levelSegments = juce::jlimit(0, numSegments, levelSegments);
+    peakSegment = juce::jlimit(0, numSegments, peakSegment);
 
-    g.setGradientFill(gradient);
-    g.fillRect(bounds.getX(), bounds.getBottom() - levelY,
-               bounds.getWidth(), levelY);
-
-    // Peak indicator
-    if (peak > 0.001f)
+    // Draw segments from bottom to top
+    for (int i = 0; i < numSegments; ++i)
     {
-        g.setColour(peak > 1.0f ? Theme::Colours::error() : Theme::Colours::text());
-        g.fillRect(bounds.getX(), bounds.getBottom() - peakY - 2,
-                   bounds.getWidth(), 2.0f);
-    }
+        float y = bounds.getBottom() - (i + 1) * (segmentHeight + segmentGap) + segmentGap;
+        auto segmentBounds = juce::Rectangle<float>(
+            bounds.getX(), y, bounds.getWidth(), segmentHeight);
 
-    // Scale markers
-    g.setColour(Theme::colour(Theme::borderLight));
-    for (float db : { 0.0f, -6.0f, -12.0f, -24.0f, -48.0f })
-    {
-        float y = decibelsToY(db, height);
-        g.drawHorizontalLine(static_cast<int>(bounds.getBottom() - y),
-                             bounds.getX(), bounds.getRight());
+        // Determine segment color based on position
+        juce::Colour segmentColour;
+        float normalizedPos = static_cast<float>(i) / numSegments;
+
+        if (normalizedPos < 0.6f)
+            segmentColour = Theme::colour(Theme::meterLow);    // Green
+        else if (normalizedPos < 0.85f)
+            segmentColour = Theme::colour(Theme::meterMid);    // Yellow
+        else
+            segmentColour = Theme::colour(Theme::meterHigh);   // Red
+
+        bool isLit = i < levelSegments;
+        bool isPeak = i == peakSegment && peak > 0.001f;
+
+        if (isLit)
+        {
+            // Lit segment with gradient
+            auto gradient = juce::ColourGradient(
+                segmentColour.brighter(0.2f), segmentBounds.getX(), segmentBounds.getY(),
+                segmentColour.darker(0.1f), segmentBounds.getX(), segmentBounds.getBottom(),
+                false);
+            g.setGradientFill(gradient);
+            g.fillRoundedRectangle(segmentBounds, 1.5f);
+
+            // Glow for lit segments
+            g.setColour(segmentColour.withAlpha(0.25f));
+            g.drawRoundedRectangle(segmentBounds.expanded(0.5f), 2.0f, 1.0f);
+        }
+        else
+        {
+            // Unlit segment (dim)
+            g.setColour(segmentColour.withAlpha(0.12f));
+            g.fillRoundedRectangle(segmentBounds, 1.5f);
+        }
+
+        // Peak hold indicator
+        if (isPeak)
+        {
+            auto peakColour = peak > 1.0f ? Theme::Colours::error() : Theme::Colours::text();
+            g.setColour(peakColour);
+            g.fillRoundedRectangle(segmentBounds, 1.5f);
+
+            // Peak glow
+            DrawingHelpers::drawGlow(g, segmentBounds, peakColour,
+                                      Theme::Glow::radiusSmall, 0.5f);
+        }
     }
 }
 

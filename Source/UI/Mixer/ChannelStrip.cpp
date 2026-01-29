@@ -1,5 +1,6 @@
 #include "ChannelStrip.h"
 #include "UI/Theme/AppTheme.h"
+#include "UI/Theme/DrawingHelpers.h"
 
 ChannelStrip::ChannelStrip()
 {
@@ -73,22 +74,59 @@ ChannelStrip::~ChannelStrip()
 
 void ChannelStrip::paint(juce::Graphics& g)
 {
-    // Background - highlight if selected or hovered
-    juce::Colour bgColor = Theme::colour(Theme::bgSlot);
+    auto bounds = getLocalBounds().toFloat();
+
+    // Drop shadow
+    DrawingHelpers::drawShadow(g, bounds.reduced(2),
+                                selected ? Theme::Shadows::md : Theme::Shadows::sm,
+                                Theme::cornerRadius);
+
+    // Determine background color based on state
+    juce::Colour bgBase = Theme::colour(Theme::bgSlot);
     if (selected)
-        bgColor = Theme::colour(Theme::bgSelected);
+        bgBase = Theme::colour(Theme::bgSelected);
     else if (hovered)
-        bgColor = Theme::colour(Theme::bgHover);
-    g.fillAll(bgColor);
+        bgBase = Theme::colour(Theme::bgHover);
 
-    // Color bar at top
-    auto colorBar = getLocalBounds().removeFromTop(4);
-    g.setColour(trackColour);
-    g.fillRect(colorBar);
+    // Background gradient
+    auto bgGradient = juce::ColourGradient(
+        bgBase.brighter(0.05f), bounds.getX(), bounds.getY(),
+        bgBase.darker(0.03f), bounds.getX(), bounds.getBottom(),
+        false);
 
-    // Border - highlight if selected
-    g.setColour(selected ? Theme::Colours::accent() : Theme::colour(Theme::border));
-    g.drawRect(getLocalBounds(), selected ? 2 : 1);
+    g.setGradientFill(bgGradient);
+    g.fillRoundedRectangle(bounds.reduced(2), Theme::cornerRadius);
+
+    // Color bar at top with gradient and glow
+    auto colorBar = bounds.removeFromTop(6).reduced(2, 0);
+    colorBar = colorBar.withTrimmedTop(2);
+
+    // Color bar glow (underneath)
+    DrawingHelpers::drawGlow(g, colorBar, trackColour, 6.0f, 0.35f);
+
+    // Color bar gradient
+    auto colorGradient = juce::ColourGradient(
+        trackColour.brighter(0.2f), colorBar.getX(), colorBar.getY(),
+        trackColour.darker(0.1f), colorBar.getX(), colorBar.getBottom(),
+        false);
+    g.setGradientFill(colorGradient);
+    g.fillRoundedRectangle(colorBar, 3.0f);
+
+    // Selection glow
+    if (selected)
+    {
+        DrawingHelpers::drawGlow(g, bounds.reduced(2), Theme::Colours::accent(),
+                                  Theme::Glow::radiusMedium, Theme::Glow::intensitySubtle);
+
+        g.setColour(Theme::Colours::accent());
+        g.drawRoundedRectangle(bounds.reduced(2), Theme::cornerRadius, 2.0f);
+    }
+    else
+    {
+        // Subtle border
+        g.setColour(Theme::colour(Theme::border));
+        g.drawRoundedRectangle(bounds.reduced(2), Theme::cornerRadius, 1.0f);
+    }
 }
 
 void ChannelStrip::resized()

@@ -1,4 +1,5 @@
 #include "TransportBar.h"
+#include "UI/Theme/DrawingHelpers.h"
 
 TransportBar::TransportBar()
 {
@@ -105,19 +106,49 @@ void TransportBar::resized()
 
 void TransportBar::paint(juce::Graphics& g)
 {
+    auto bounds = getLocalBounds().toFloat();
     auto bgColour = Theme::colour(Theme::bgSlot);
-    g.fillAll(bgColour);
 
-    // Subtle gradient
-    juce::ColourGradient gradient(bgColour.brighter(0.05f), 0, 0,
-                                   bgColour.darker(0.05f), 0, static_cast<float>(getHeight()),
+    // Background gradient (deeper)
+    juce::ColourGradient gradient(bgColour.brighter(0.08f), 0, 0,
+                                   bgColour.darker(0.1f), 0, bounds.getHeight(),
                                    false);
     g.setGradientFill(gradient);
-    g.fillRect(getLocalBounds());
+    g.fillRect(bounds);
 
-    // Bottom border
+    // Inner shadow at top (inset effect)
+    DrawingHelpers::drawInnerShadow(g, bounds, 3.0f,
+                                     juce::Colours::black.withAlpha(0.3f), 0.0f);
+
+    // Time display area background with glow
+    auto positionBounds = juce::Rectangle<float>(
+        bounds.getCentreX() - 80, 8,
+        160, bounds.getHeight() - 16
+    );
+
+    // Subtle glow around time display
+    DrawingHelpers::drawGlow(g, positionBounds, Theme::Colours::accent(),
+                              Theme::Glow::radiusSmall, Theme::Glow::intensitySubtle * 0.5f);
+
+    // Time display background
+    g.setColour(Theme::colour(Theme::bgDark).withAlpha(0.5f));
+    g.fillRoundedRectangle(positionBounds, Theme::cornerRadiusSm);
+
+    // Time display border
+    g.setColour(Theme::colour(Theme::border).withAlpha(0.5f));
+    g.drawRoundedRectangle(positionBounds, Theme::cornerRadiusSm, 1.0f);
+
+    // Top highlight line
+    g.setColour(juce::Colours::white.withAlpha(0.05f));
+    g.drawHorizontalLine(1, 0, bounds.getWidth());
+
+    // Bottom border (shadow line)
     g.setColour(Theme::colour(Theme::bgDark));
-    g.fillRect(0, getHeight() - 1, getWidth(), 1);
+    g.fillRect(0.0f, bounds.getHeight() - 2, bounds.getWidth(), 2.0f);
+
+    // Bottom accent line
+    g.setColour(Theme::Colours::accent().withAlpha(0.2f));
+    g.fillRect(0.0f, bounds.getHeight() - 1, bounds.getWidth(), 1.0f);
 }
 
 void TransportBar::setTransportController(TransportController* controller)

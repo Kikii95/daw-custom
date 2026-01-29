@@ -1,4 +1,5 @@
 #include "ModernLookAndFeel.h"
+#include "DrawingHelpers.h"
 
 ModernLookAndFeel::ModernLookAndFeel()
 {
@@ -43,28 +44,46 @@ void ModernLookAndFeel::drawButtonBackground(juce::Graphics& g,
                                               bool shouldDrawButtonAsDown)
 {
     auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
+
+    // Drop shadow (only when not pressed)
+    if (!shouldDrawButtonAsDown)
+    {
+        DrawingHelpers::drawShadow(g, bounds, Theme::Shadows::sm, Theme::cornerRadiusSm);
+    }
+
+    // Determine button color based on state
     auto baseColour = backgroundColour;
-
     if (shouldDrawButtonAsDown)
-        baseColour = baseColour.brighter(0.1f);
+        baseColour = baseColour.darker(0.1f);
     else if (shouldDrawButtonAsHighlighted)
-        baseColour = baseColour.brighter(0.05f);
+        baseColour = baseColour.brighter(0.08f);
 
-    // Background
-    g.setColour(baseColour);
+    // Gradient fill
+    auto gradient = shouldDrawButtonAsDown
+        ? Theme::Gradients::buttonPressed(bounds, baseColour)
+        : Theme::Gradients::buttonNormal(bounds, baseColour);
+
+    g.setGradientFill(gradient);
     g.fillRoundedRectangle(bounds, Theme::cornerRadiusSm);
 
-    // Subtle border
+    // Top highlight (beveled effect) - only when not pressed
+    if (!shouldDrawButtonAsDown)
+    {
+        DrawingHelpers::drawTopHighlight(g, bounds, Theme::cornerRadiusSm, 0.12f);
+    }
+
+    // Border
     g.setColour(Theme::colour(Theme::border));
     g.drawRoundedRectangle(bounds, Theme::cornerRadiusSm, 1.0f);
 
-    // Glow on hover/press
-    if (shouldDrawButtonAsHighlighted || shouldDrawButtonAsDown)
+    // Glow on hover
+    if (shouldDrawButtonAsHighlighted && !shouldDrawButtonAsDown && button.isEnabled())
     {
         auto glowColour = button.getToggleState()
-            ? Theme::Colours::warning().withAlpha(0.3f)
-            : Theme::Colours::accent().withAlpha(0.2f);
-        drawGlow(g, bounds, glowColour, 4.0f);
+            ? Theme::Colours::warning()
+            : Theme::Colours::accent();
+        DrawingHelpers::drawGlow(g, bounds, glowColour,
+                                  Theme::Glow::radiusSmall, Theme::Glow::intensitySubtle);
     }
 }
 
@@ -115,23 +134,45 @@ void ModernLookAndFeel::drawRotarySlider(juce::Graphics& g,
                             0.0f, rotaryStartAngle, angle, true);
 
     auto fillColour = slider.findColour(juce::Slider::rotarySliderFillColourId);
+
+    // Multi-layer glow for value arc (FL Studio style)
+    for (float i = 3.0f; i > 0; i -= 1.0f)
+    {
+        g.setColour(fillColour.withAlpha(0.12f * (1.0f - i / 3.0f)));
+        g.strokePath(valueArc, juce::PathStrokeType(4.0f + i * 3.0f,
+                     juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
+
+    // Crisp value arc
     g.setColour(fillColour);
     g.strokePath(valueArc, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved,
                                                  juce::PathStrokeType::rounded));
 
-    // Glow effect on value arc
-    g.setColour(fillColour.withAlpha(0.3f));
-    g.strokePath(valueArc, juce::PathStrokeType(8.0f, juce::PathStrokeType::curved,
-                                                 juce::PathStrokeType::rounded));
+    // Knob center with gradient (3D effect)
+    auto knobRadius = radius * 0.4f;
+    auto knobBounds = juce::Rectangle<float>(centreX - knobRadius, centreY - knobRadius,
+                                              knobRadius * 2, knobRadius * 2);
 
-    // Center dot
-    auto dotRadius = radius * 0.15f;
-    g.setColour(Theme::Colours::text());
-    g.fillEllipse(centreX - dotRadius, centreY - dotRadius, dotRadius * 2, dotRadius * 2);
+    // Knob gradient (top-lit)
+    auto knobGradient = juce::ColourGradient(
+        Theme::colour(Theme::bgHover).brighter(0.15f), knobBounds.getX(), knobBounds.getY(),
+        Theme::colour(Theme::bgHover).darker(0.1f), knobBounds.getX(), knobBounds.getBottom(),
+        false);
+
+    g.setGradientFill(knobGradient);
+    g.fillEllipse(knobBounds);
+
+    // Knob highlight arc (top half only)
+    g.setColour(juce::Colours::white.withAlpha(0.08f));
+    g.fillEllipse(knobBounds.reduced(knobRadius * 0.15f).withBottom(centreY));
+
+    // Knob border
+    g.setColour(Theme::colour(Theme::border));
+    g.drawEllipse(knobBounds, 1.0f);
 
     // Pointer
     juce::Path pointer;
-    auto pointerLength = radius * 0.6f;
+    auto pointerLength = radius * 0.55f;
     auto pointerThickness = 3.0f;
     pointer.addRoundedRectangle(-pointerThickness * 0.5f, -radius + 6.0f,
                                  pointerThickness, pointerLength, 2.0f);
@@ -238,19 +279,35 @@ void ModernLookAndFeel::drawComboBox(juce::Graphics& g,
     auto bounds = juce::Rectangle<int>(0, 0, width, height).toFloat().reduced(1.0f);
     auto cornerRadius = Theme::cornerRadiusSm;
 
-    // Background
+    // Drop shadow
+    if (!isButtonDown)
+    {
+        DrawingHelpers::drawShadow(g, bounds, Theme::Shadows::sm, cornerRadius);
+    }
+
+    // Background with gradient
     auto bgColour = box.findColour(juce::ComboBox::backgroundColourId);
     if (isButtonDown)
-        bgColour = bgColour.brighter(0.1f);
+        bgColour = bgColour.darker(0.05f);
 
-    g.setColour(bgColour);
+    auto gradient = isButtonDown
+        ? Theme::Gradients::buttonPressed(bounds, bgColour)
+        : Theme::Gradients::buttonNormal(bounds, bgColour);
+
+    g.setGradientFill(gradient);
     g.fillRoundedRectangle(bounds, cornerRadius);
+
+    // Top highlight
+    if (!isButtonDown)
+    {
+        DrawingHelpers::drawTopHighlight(g, bounds, cornerRadius, 0.08f);
+    }
 
     // Border
     g.setColour(box.findColour(juce::ComboBox::outlineColourId));
     g.drawRoundedRectangle(bounds, cornerRadius, 1.0f);
 
-    // Arrow
+    // Arrow with slight glow when hovered
     auto arrowZone = juce::Rectangle<int>(width - 24, 0, 20, height);
     juce::Path arrow;
     arrow.addTriangle(
@@ -267,9 +324,15 @@ void ModernLookAndFeel::drawPopupMenuBackground(juce::Graphics& g, int width, in
 {
     auto bounds = juce::Rectangle<int>(0, 0, width, height).toFloat();
 
-    g.setColour(Theme::colour(Theme::bgPanel));
+    // Drop shadow for popup
+    DrawingHelpers::drawShadow(g, bounds.reduced(4), Theme::Shadows::lg, Theme::cornerRadius);
+
+    // Background with gradient
+    auto gradient = Theme::Gradients::panel(bounds);
+    g.setGradientFill(gradient);
     g.fillRoundedRectangle(bounds, Theme::cornerRadius);
 
+    // Border
     g.setColour(Theme::colour(Theme::border));
     g.drawRoundedRectangle(bounds.reduced(0.5f), Theme::cornerRadius, 1.0f);
 }
@@ -414,15 +477,3 @@ void ModernLookAndFeel::drawTooltip(juce::Graphics& g, const juce::String& text,
     g.drawText(text, bounds.reduced(6, 4), juce::Justification::centred, true);
 }
 
-//=============================================================================
-// HELPERS
-//=============================================================================
-void ModernLookAndFeel::drawGlow(juce::Graphics& g, juce::Rectangle<float> bounds,
-                                  juce::Colour colour, float radius)
-{
-    for (float i = radius; i > 0; i -= 1.0f)
-    {
-        g.setColour(colour.withAlpha(colour.getFloatAlpha() * (1.0f - i / radius) * 0.5f));
-        g.drawRoundedRectangle(bounds.expanded(i), Theme::cornerRadiusSm + i, 1.0f);
-    }
-}
