@@ -8,7 +8,8 @@
 #include <vector>
 #include <memory>
 
-class TrackLane : public juce::Component
+class TrackLane : public juce::Component,
+                  private juce::TextEditor::Listener
 {
 public:
     TrackLane();
@@ -16,6 +17,9 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+    // Mouse handling
+    void mouseDoubleClick(const juce::MouseEvent& e) override;
 
     // Track data
     void setTrackData(const Track& track);
@@ -36,13 +40,22 @@ public:
 
     // Callbacks
     std::function<void(TrackLane*, ClipComponent*)> onClipSelected;
+    std::function<void(TrackLane*, const juce::String&)> onTrackRenamed;
 
     // Waveform cache access
     void setWaveformCache(WaveformCache* cache) { waveformCache = cache; }
     void setFormatManager(juce::AudioFormatManager* manager) { formatManager = manager; }
 
+    // Header width accessor for ruler alignment
+    static constexpr int getHeaderWidth() { return headerWidth; }
+
 private:
     void layoutClips();
+    void showNameEditor();
+    void hideNameEditor();
+    void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
+    void textEditorEscapeKeyPressed(juce::TextEditor& editor) override;
+    void textEditorFocusLost(juce::TextEditor& editor) override;
 
     Track trackData;
     std::vector<std::unique_ptr<ClipComponent>> clipComponents;
@@ -57,6 +70,10 @@ private:
 
     // Track header width
     static constexpr int headerWidth = 120;
+
+    // Name editing
+    std::unique_ptr<juce::TextEditor> nameEditor;
+    bool isEditingName = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackLane)
 };

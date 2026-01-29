@@ -141,3 +141,79 @@ void TrackLane::layoutClips()
         clip->setBounds(headerWidth + x, 4, width, getHeight() - 8);
     }
 }
+
+void TrackLane::mouseDoubleClick(const juce::MouseEvent& e)
+{
+    // Check if double-click is in header area (track name zone)
+    auto headerArea = getLocalBounds().removeFromLeft(headerWidth);
+    if (headerArea.contains(e.getPosition()))
+    {
+        showNameEditor();
+    }
+}
+
+void TrackLane::showNameEditor()
+{
+    if (isEditingName)
+        return;
+
+    isEditingName = true;
+
+    // Create text editor
+    nameEditor = std::make_unique<juce::TextEditor>();
+    nameEditor->setMultiLine(false);
+    nameEditor->setReturnKeyStartsNewLine(false);
+    nameEditor->setText(trackData.name, false);
+    nameEditor->selectAll();
+    nameEditor->addListener(this);
+
+    // Style
+    nameEditor->setColour(juce::TextEditor::backgroundColourId, Theme::colour(Theme::bgSlot));
+    nameEditor->setColour(juce::TextEditor::textColourId, Theme::Colours::text());
+    nameEditor->setColour(juce::TextEditor::outlineColourId, Theme::Colours::accent());
+    nameEditor->setColour(juce::TextEditor::focusedOutlineColourId, Theme::Colours::accent());
+    nameEditor->setFont(12.0f);
+
+    // Position over the track name
+    auto headerArea = getLocalBounds().removeFromLeft(headerWidth);
+    auto nameBounds = headerArea.reduced(4, 4).removeFromTop(24);
+    nameEditor->setBounds(nameBounds);
+
+    addAndMakeVisible(*nameEditor);
+    nameEditor->grabKeyboardFocus();
+}
+
+void TrackLane::hideNameEditor()
+{
+    if (nameEditor != nullptr)
+    {
+        nameEditor->removeListener(this);
+        removeChildComponent(nameEditor.get());
+        nameEditor.reset();
+    }
+    isEditingName = false;
+    repaint();
+}
+
+void TrackLane::textEditorReturnKeyPressed(juce::TextEditor& editor)
+{
+    auto newName = editor.getText().trim();
+    if (newName.isNotEmpty() && newName != trackData.name)
+    {
+        trackData.name = newName;
+        if (onTrackRenamed)
+            onTrackRenamed(this, newName);
+    }
+    hideNameEditor();
+}
+
+void TrackLane::textEditorEscapeKeyPressed(juce::TextEditor& /*editor*/)
+{
+    hideNameEditor();
+}
+
+void TrackLane::textEditorFocusLost(juce::TextEditor& editor)
+{
+    // Treat focus loss as confirmation
+    textEditorReturnKeyPressed(editor);
+}

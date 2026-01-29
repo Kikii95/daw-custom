@@ -1,4 +1,5 @@
 #include "MainComponent.h"
+#include "Audio/AudioClip.h"
 #include "Audio/Plugins/PluginManager.h"
 #include "UI/Plugins/PluginEditorWindow.h"
 
@@ -133,7 +134,7 @@ void MainComponent::filesDropped(const juce::StringArray& files, int /*x*/, int 
         if (track == nullptr)
             continue;
 
-        // Create clip
+        // Create clip metadata
         Clip clip;
         clip.id = juce::Uuid();
         clip.name = file.getFileNameWithoutExtension();
@@ -141,8 +142,19 @@ void MainComponent::filesDropped(const juce::StringArray& files, int /*x*/, int 
         clip.startTime = 0.0;
         clip.duration = result.lengthInSeconds;
         clip.sourceSampleRate = result.sampleRate;
+        clip.colour = track->colour;
 
+        // Add to project track (for UI/saving)
         track->addClip(clip);
+
+        // Create AudioClip with actual audio data and add to mixer's AudioTrack
+        if (auto* audioTrack = mixer->getTrack(0))
+        {
+            auto audioClip = std::make_unique<AudioClip>();
+            audioClip->loadFromBuffer(std::move(result.buffer), result.sampleRate, clip);
+            audioTrack->addClip(std::move(audioClip));
+            audioTrack->setTrackData(*track);
+        }
 
         // Update duration
         transport.setDuration(project->getTotalDuration());

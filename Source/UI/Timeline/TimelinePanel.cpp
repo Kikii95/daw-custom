@@ -5,6 +5,9 @@ TimelinePanel::TimelinePanel()
 {
     addAndMakeVisible(ruler);
 
+    // Set ruler offset to match track lane header width
+    ruler.setHeaderOffset(TrackLane::getHeaderWidth());
+
     viewport.setViewedComponent(&trackContainer, false);
     viewport.setScrollBarsShown(true, false);
     addAndMakeVisible(viewport);

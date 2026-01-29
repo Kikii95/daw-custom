@@ -49,7 +49,12 @@ void TimelineRuler::drawTimeTicks(juce::Graphics& g)
 
     for (double t = startTick; t <= visibleEnd; t += tickInterval)
     {
-        float x = static_cast<float>((t - visibleStart) * pixelsPerSecond);
+        // Apply header offset so time 0:00 aligns with clip start
+        float x = static_cast<float>(headerOffset + (t - visibleStart) * pixelsPerSecond);
+
+        // Skip if outside visible area
+        if (x < headerOffset - 40)
+            continue;
 
         bool isMajor = std::fmod(t, tickInterval * 4) < 0.001;
 
@@ -81,7 +86,8 @@ void TimelineRuler::drawPlayhead(juce::Graphics& g)
     if (playheadPosition < visibleStart || playheadPosition > visibleEnd)
         return;
 
-    float x = static_cast<float>((playheadPosition - visibleStart) * pixelsPerSecond);
+    // Apply header offset to align with clips
+    float x = static_cast<float>(headerOffset + (playheadPosition - visibleStart) * pixelsPerSecond);
 
     // Playhead triangle
     juce::Path triangle;

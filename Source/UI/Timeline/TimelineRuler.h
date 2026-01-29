@@ -20,12 +20,16 @@ public:
     // Tempo for beat grid
     void setTempo(double bpm) { tempo = bpm; repaint(); }
 
+    // Header offset for alignment with track lanes
+    void setHeaderOffset(int offset) { headerOffset = offset; repaint(); }
+
 private:
     double visibleStart = 0.0;
     double visibleEnd = 30.0;
     double pixelsPerSecond = 50.0;
     double playheadPosition = 0.0;
     double tempo = 120.0;
+    int headerOffset = 0;
 
     // Draw helpers
     void drawTimeTicks(juce::Graphics& g);
