@@ -10,12 +10,15 @@ ChannelStrip::ChannelStrip()
     volumeSlider.setValue(1.0);
     volumeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 18);
     volumeSlider.setColour(juce::Slider::thumbColourId, Theme::colour(Theme::accentBlue));
-    volumeSlider.setTooltip("Volume: 0% to 200%");
+    volumeSlider.setTooltip("Volume: 0% to 200% (Shift+drag for fine control)");
     volumeSlider.onValueChange = [this]()
     {
         if (onVolumeChanged)
             onVolumeChanged(trackId, static_cast<float>(volumeSlider.getValue()));
     };
+    // Fine control mode (slower drag sensitivity with Shift key)
+    volumeSlider.setVelocityBasedMode(true);
+    volumeSlider.setVelocityModeParameters(0.5, 1, 0.1, false);
     addAndMakeVisible(volumeSlider);
 
     // Pan knob
@@ -24,12 +27,15 @@ ChannelStrip::ChannelStrip()
     panSlider.setValue(0.0);
     panSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
     panSlider.setColour(juce::Slider::thumbColourId, Theme::colour(Theme::accentPurple));
-    panSlider.setTooltip("Pan: Left/Right balance");
+    panSlider.setTooltip("Pan: Left/Right balance (Shift+drag for fine control)");
     panSlider.onValueChange = [this]()
     {
         if (onPanChanged)
             onPanChanged(trackId, static_cast<float>(panSlider.getValue()));
     };
+    // Fine control mode for rotary knob
+    panSlider.setVelocityBasedMode(true);
+    panSlider.setVelocityModeParameters(0.5, 1, 0.1, false);
     addAndMakeVisible(panSlider);
 
     // Mute button
@@ -201,6 +207,49 @@ void ChannelStrip::mouseDown(const juce::MouseEvent& e)
 
     if (onSelected)
         onSelected(trackId);
+
+    // Start drag detection
+    dragStartPos = e.getPosition();
+    dragStartX = getX();
+    dragging = false;
+}
+
+void ChannelStrip::mouseDrag(const juce::MouseEvent& e)
+{
+    if (!dragging)
+    {
+        // Start dragging after threshold
+        int threshold = 5;
+        if (std::abs(e.getPosition().x - dragStartPos.x) > threshold)
+        {
+            dragging = true;
+            setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+        }
+    }
+
+    if (dragging)
+    {
+        int deltaX = e.getPosition().x - dragStartPos.x;
+        int newX = dragStartX + deltaX;
+
+        // Calculate which slot we're dragging over (horizontal reorder)
+        int stripWidth = getWidth();
+        int targetIndex = (newX + stripWidth / 2) / stripWidth;
+
+        if (targetIndex != channelIndex && targetIndex >= 0 && onReorder)
+        {
+            onReorder(channelIndex, targetIndex);
+        }
+    }
+}
+
+void ChannelStrip::mouseUp(const juce::MouseEvent& /*e*/)
+{
+    if (dragging)
+    {
+        dragging = false;
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+    }
 }
 
 void ChannelStrip::mouseEnter(const juce::MouseEvent& /*e*/)

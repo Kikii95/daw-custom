@@ -2,6 +2,7 @@
 #include "UI/Plugins/PluginEditorWindow.h"
 #include "UI/Theme/AppTheme.h"
 #include "UI/Theme/DrawingHelpers.h"
+#include "Audio/DSP/Effects/DelayEffect.h"
 
 EffectSlotComponent::EffectSlotComponent()
 {
@@ -67,6 +68,51 @@ EffectSlotComponent::EffectSlotComponent()
             onPresetClicked(effectIndex);
     };
     addAndMakeVisible(presetButton);
+
+    // Tempo sync controls (for Delay effect only)
+    syncButton.setColour(juce::ToggleButton::textColourId, Theme::Colours::textMuted());
+    syncButton.setColour(juce::ToggleButton::tickColourId, Theme::Colours::accent());
+    syncButton.setTooltip("Sync delay time to tempo");
+    syncButton.onClick = [this]()
+    {
+        if (syncButton.getToggleState() && isDelayEffect)
+        {
+            // Apply tempo sync based on selected note value
+            float noteValue = 1.0f;  // Default: quarter note
+            int selected = noteValueCombo.getSelectedId();
+            switch (selected)
+            {
+                case 1: noteValue = 2.0f; break;      // 1/2 (half note)
+                case 2: noteValue = 1.0f; break;      // 1/4 (quarter)
+                case 3: noteValue = 0.5f; break;      // 1/8 (eighth)
+                case 4: noteValue = 0.25f; break;     // 1/16 (sixteenth)
+                case 5: noteValue = 1.5f; break;      // dotted 1/4
+                case 6: noteValue = 0.75f; break;     // dotted 1/8
+                default: noteValue = 1.0f; break;
+            }
+
+            if (auto* delayEffect = dynamic_cast<DelayEffect*>(effectSlot))
+                delayEffect->syncToTempo(currentTempo, noteValue);
+        }
+    };
+    syncButton.setVisible(false);
+    addAndMakeVisible(syncButton);
+
+    noteValueCombo.addItem("1/2", 1);
+    noteValueCombo.addItem("1/4", 2);
+    noteValueCombo.addItem("1/8", 3);
+    noteValueCombo.addItem("1/16", 4);
+    noteValueCombo.addItem("1/4.", 5);  // Dotted quarter
+    noteValueCombo.addItem("1/8.", 6);  // Dotted eighth
+    noteValueCombo.setSelectedId(2);  // Default: 1/4
+    noteValueCombo.setTooltip("Note value for tempo sync");
+    noteValueCombo.onChange = [this]()
+    {
+        if (syncButton.getToggleState())
+            syncButton.onClick();  // Re-apply sync
+    };
+    noteValueCombo.setVisible(false);
+    addAndMakeVisible(noteValueCombo);
 }
 
 EffectSlotComponent::~EffectSlotComponent()
@@ -123,6 +169,19 @@ void EffectSlotComponent::paint(juce::Graphics& g)
                 ? Theme::Colours::accent().withAlpha(0.4f)
                 : Theme::colour(Theme::border));
     g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadius, 1.0f);
+
+    // Drag handle (≡) on the left of header
+    auto handleArea = getLocalBounds().removeFromTop(headerHeight).removeFromLeft(dragHandleWidth + padding);
+    handleArea = handleArea.reduced(padding + 2, (headerHeight - 12) / 2);
+
+    g.setColour(Theme::Colours::textMuted());
+    int lineSpacing = 4;
+    for (int i = 0; i < 3; ++i)
+    {
+        int y = handleArea.getY() + i * lineSpacing;
+        g.drawHorizontalLine(y, static_cast<float>(handleArea.getX()),
+                            static_cast<float>(handleArea.getRight()));
+    }
 }
 
 void EffectSlotComponent::resized()
@@ -131,6 +190,10 @@ void EffectSlotComponent::resized()
 
     // Header area
     auto header = bounds.removeFromTop(headerHeight - padding * 2);
+
+    // Leave space for drag handle on left
+    header.removeFromLeft(dragHandleWidth);
+
     removeButton.setBounds(header.removeFromRight(28));
     header.removeFromRight(4);
 
@@ -144,7 +207,17 @@ void EffectSlotComponent::resized()
     bypassButton.setBounds(header.removeFromRight(40));
     header.removeFromRight(4);
     presetButton.setBounds(header.removeFromRight(24));
-    header.removeFromRight(8);
+    header.removeFromRight(4);
+
+    // Tempo sync controls (only for Delay effect)
+    if (isDelayEffect)
+    {
+        noteValueCombo.setBounds(header.removeFromRight(50));
+        header.removeFromRight(2);
+        syncButton.setBounds(header.removeFromRight(50));
+        header.removeFromRight(8);
+    }
+
     nameLabel.setBounds(header);
 
     bounds.removeFromTop(padding);
@@ -187,6 +260,11 @@ void EffectSlotComponent::setEffect(EffectSlot* slot, int index)
     // Check if this is a VST3 plugin
     isVST3Effect = (dynamic_cast<VST3EffectSlot*>(slot) != nullptr);
     editButton.setVisible(isVST3Effect);
+
+    // Check if this is a Delay effect (for tempo sync)
+    isDelayEffect = (dynamic_cast<DelayEffect*>(slot) != nullptr);
+    syncButton.setVisible(isDelayEffect);
+    noteValueCombo.setVisible(isDelayEffect);
 
     if (slot)
     {
@@ -264,6 +342,10 @@ void EffectSlotComponent::buildParameterControls()
             }
         };
 
+        // Fine control mode for precision (Shift+drag)
+        ctrl.slider->setVelocityBasedMode(true);
+        ctrl.slider->setVelocityModeParameters(0.5, 1, 0.1, false);
+
         addAndMakeVisible(ctrl.slider.get());
         paramControls.push_back(std::move(ctrl));
     }
@@ -279,4 +361,55 @@ void EffectSlotComponent::clearParameterControls()
             removeChildComponent(ctrl.label.get());
     }
     paramControls.clear();
+}
+
+void EffectSlotComponent::mouseDown(const juce::MouseEvent& e)
+{
+    // Only start drag from header area (drag handle region)
+    auto headerArea = getLocalBounds().removeFromTop(headerHeight);
+    auto dragHandleArea = headerArea.removeFromLeft(dragHandleWidth + padding);
+
+    if (dragHandleArea.contains(e.getPosition()))
+    {
+        dragging = true;
+        dragStartPos = e.getPosition();
+        dragStartY = getY();
+        setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    }
+}
+
+void EffectSlotComponent::mouseDrag(const juce::MouseEvent& e)
+{
+    if (!dragging)
+        return;
+
+    int deltaY = e.getPosition().y - dragStartPos.y;
+    int newY = dragStartY + deltaY;
+
+    // Calculate which slot we're dragging over
+    int slotHeight = getPreferredHeight();
+    int targetIndex = (newY + slotHeight / 2) / slotHeight;
+
+    if (targetIndex != effectIndex && targetIndex >= 0 && onReorder)
+    {
+        onReorder(effectIndex, targetIndex);
+    }
+}
+
+void EffectSlotComponent::mouseUp(const juce::MouseEvent& /*e*/)
+{
+    if (dragging)
+    {
+        dragging = false;
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+    }
+}
+
+void EffectSlotComponent::setTempo(double bpm)
+{
+    currentTempo = bpm;
+
+    // Re-apply sync if enabled
+    if (isDelayEffect && syncButton.getToggleState())
+        syncButton.onClick();
 }

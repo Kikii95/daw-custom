@@ -26,6 +26,7 @@ public:
     int getNumTracks() const { return static_cast<int>(tracks.size()); }
     AudioTrack* getTrack(int index);
     AudioTrack* getTrackById(const juce::Uuid& trackId);
+    void moveTrack(int fromIndex, int toIndex);
 
     // Transport binding
     void setTransportController(TransportController* controller);

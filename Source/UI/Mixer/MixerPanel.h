@@ -44,6 +44,7 @@ public:
     std::function<void(juce::Uuid, bool)> onTrackSoloChanged;
     std::function<void(float)> onMasterVolumeChanged;
     std::function<void(juce::Uuid)> onTrackSelected;
+    std::function<void(int, int)> onTrackReordered;  // (fromIndex, toIndex)
 
 private:
     std::vector<std::unique_ptr<ChannelStrip>> channelStrips;

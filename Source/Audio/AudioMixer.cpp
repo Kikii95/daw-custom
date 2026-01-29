@@ -143,6 +143,25 @@ AudioTrack* AudioMixer::getTrackById(const juce::Uuid& trackId)
     return nullptr;
 }
 
+void AudioMixer::moveTrack(int fromIndex, int toIndex)
+{
+    juce::ScopedLock sl(trackLock);
+
+    auto numTracks = static_cast<int>(tracks.size());
+    if (fromIndex < 0 || fromIndex >= numTracks ||
+        toIndex < 0 || toIndex >= numTracks ||
+        fromIndex == toIndex)
+        return;
+
+    auto track = std::move(tracks[static_cast<size_t>(fromIndex)]);
+    tracks.erase(tracks.begin() + fromIndex);
+
+    if (toIndex > fromIndex)
+        --toIndex;
+
+    tracks.insert(tracks.begin() + toIndex, std::move(track));
+}
+
 void AudioMixer::setTransportController(TransportController* controller)
 {
     transport = controller;

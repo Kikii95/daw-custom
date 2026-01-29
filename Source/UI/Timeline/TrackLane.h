@@ -52,10 +52,14 @@ public:
     std::function<void(TrackLane*, const juce::String&)> onTrackRenamed;
     std::function<void(TrackLane*)> onTrackSelected;
     std::function<void(TrackLane*, ClipComponent*, int)> onClipDraggedToTrack;  // trackDelta: -1 = up, +1 = down
+    std::function<void(TrackLane*, ClipComponent*, double)> onClipDragDelta;    // deltaPixels for multi-clip drag
+    std::function<void(TrackLane*, ClipComponent*)> onClipDragStart;           // Called when drag begins
+    std::function<void(TrackLane*, ClipComponent*)> onClipDragEnd;             // Called when drag ends
     std::function<void(TrackLane*)> onTrackDelete;
     std::function<void(TrackLane*, juce::Colour)> onTrackColourChanged;
     std::function<void(TrackLane*, ClipComponent*)> onClipDelete;
     std::function<void(TrackLane*, ClipComponent*)> onClipDuplicate;
+    std::function<void(TrackLane*, ClipComponent*, bool isLeftEdge, double deltaPixels)> onClipTrim;
 
     // Waveform cache access
     void setWaveformCache(WaveformCache* cache) { waveformCache = cache; }

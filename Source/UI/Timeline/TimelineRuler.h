@@ -17,8 +17,14 @@ public:
     // Playhead position
     void setPlayheadPosition(double timeInSeconds);
 
-    // Tempo for beat grid
+    // Tempo and time signature for beat grid
     void setTempo(double bpm) { tempo = bpm; repaint(); }
+    double getTempo() const { return tempo; }
+    void setTimeSignature(int num, int denom) { timeSignatureNum = num; timeSignatureDenom = denom; repaint(); }
+
+    // Display mode: beats or time
+    void setShowBeats(bool show) { showBeats = show; repaint(); }
+    bool isShowingBeats() const { return showBeats; }
 
     // Header offset for alignment with track lanes
     void setHeaderOffset(int offset) { headerOffset = offset; repaint(); }
@@ -46,6 +52,9 @@ private:
     double pixelsPerSecond = 50.0;
     double playheadPosition = 0.0;
     double tempo = 120.0;
+    int timeSignatureNum = 4;
+    int timeSignatureDenom = 4;
+    bool showBeats = true;  // Default to showing beat grid
     int headerOffset = 0;
 
     // Loop state
@@ -61,6 +70,7 @@ private:
 
     // Draw helpers
     void drawTimeTicks(juce::Graphics& g);
+    void drawBeatTicks(juce::Graphics& g);
     void drawPlayhead(juce::Graphics& g);
     void drawLoopMarkers(juce::Graphics& g);
 

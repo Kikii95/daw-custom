@@ -122,6 +122,20 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 
 ---
 
+## Q1 2026 — Advanced Editing ✅
+
+### Janvier
+- [x] **Sprint E : Advanced Editing & BPM Workflow** ✅
+  - Split clip (Ctrl+B / Alt+Click)
+  - Trim handles (drag clip edges)
+  - Beat grid on ruler
+  - Beat-based snap (1/Bar → 1/16)
+  - Position display toggle (Time ↔ Bar:Beat:Tick)
+  - Paste at click position
+  - Delay tempo sync
+
+---
+
 ## Q2-Q3 2026 — Polish
 
 ### Février-Mars

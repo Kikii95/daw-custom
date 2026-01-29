@@ -167,6 +167,33 @@
 
 ---
 
+## ✂️ Phase 10 : Advanced Editing & BPM Workflow ✅
+
+### Sprint E — Clip Editing ✅
+- [x] Split clip at playhead (Ctrl+B)
+- [x] Split clip at click position (Alt+Click)
+- [x] Trim handles on clip edges
+- [x] Drag left edge adjusts startTime + sourceOffset
+- [x] Drag right edge adjusts duration
+- [x] Trim cursor (↔) on edge hover
+- [x] Paste at click position (5s timeout)
+
+### Sprint E — BPM & Beat Grid ✅
+- [x] BPM sync Project ↔ TransportController ↔ Timeline
+- [x] Beat grid on ruler (bar lines + beat lines)
+- [x] Bar numbers display
+- [x] Beat-based snap (1/Bar, 1/Beat, 1/2, 1/4, 1/8, 1/16)
+- [x] Snap selector dropdown in TransportBar
+- [x] Position display toggle (Time ↔ Bar:Beat:Tick)
+- [x] 960 PPQ resolution for ticks
+
+### Sprint E — Delay Tempo Sync ✅
+- [x] Sync button in Delay effect UI
+- [x] Note value selector (1/2, 1/4, 1/8, 1/16, dotted)
+- [x] Tempo propagation to EffectRackPanel/EffectSlotComponent
+
+---
+
 ## 💡 Ideas (Backlog Long Terme)
 
 - [ ] Piano roll / MIDI editor

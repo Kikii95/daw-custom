@@ -49,6 +49,15 @@ public:
     const Clip& getClipData() const { return clipData; }
     void setClipData(const Clip& data) { clipData = data; }
 
+    // Update timing (for trim operations)
+    void updateTiming(double newStartTime, double newDuration, double newSourceOffset)
+    {
+        juce::ScopedLock sl(lock);
+        clipData.startTime = newStartTime;
+        clipData.duration = newDuration;
+        clipData.sourceStartOffset = newSourceOffset;
+    }
+
     // Check if position (in samples) falls within this clip
     bool containsPosition(juce::int64 positionInSamples, double projectSampleRate) const;
 

@@ -84,7 +84,12 @@ bool TransportController::isStopped() const
 
 void TransportController::setTempo(double bpm)
 {
-    tempo.store(juce::jmax(20.0, juce::jmin(999.0, bpm)));
+    double newTempo = juce::jmax(20.0, juce::jmin(999.0, bpm));
+    if (std::abs(tempo.load() - newTempo) > 0.01)
+    {
+        tempo.store(newTempo);
+        notifyTempoChanged();
+    }
 }
 
 double TransportController::getTempo() const
@@ -271,4 +276,12 @@ void TransportController::notifyLoopChanged()
     double end = loopEnd.load();
     for (auto* listener : listeners)
         listener->transportLoopChanged(enabled, start, end);
+}
+
+void TransportController::notifyTempoChanged()
+{
+    juce::ScopedLock lock(listenerLock);
+    double currentTempo = tempo.load();
+    for (auto* listener : listeners)
+        listener->tempoChanged(currentTempo);
 }

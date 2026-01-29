@@ -28,6 +28,9 @@ public:
     AudioTrack* getTrack() const { return currentTrack; }
     void refreshEffects();
 
+    // Tempo for delay sync
+    void setTempo(double bpm);
+
     // Callbacks to MainComponent
     std::function<void(juce::Uuid, int, bool)> onEffectBypassChanged;
     std::function<void(juce::Uuid, int, int, float)> onEffectParameterChanged;
@@ -79,6 +82,9 @@ private:
 
     // Cache of plugin descriptions (for combo items)
     juce::Array<juce::PluginDescription> pluginDescriptions;
+
+    // Tempo for delay sync
+    double currentTempo = 120.0;
 
     // Preset system
     std::unique_ptr<PresetManager> presetManager;

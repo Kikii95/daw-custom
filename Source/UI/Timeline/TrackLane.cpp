@@ -137,18 +137,26 @@ void TrackLane::addClipComponent(const Clip& clipData, juce::AudioThumbnail* thu
 
     clip->onDrag = [this](ClipComponent* c, double deltaPixels)
     {
-        double deltaTime = deltaPixels / pixelsPerSecond;
-        Clip data = c->getClipData();
-        double newTime = juce::jmax(0.0, data.startTime + deltaTime);
+        // Notify TimelinePanel for potential multi-clip drag
+        if (onClipDragDelta)
+        {
+            onClipDragDelta(this, c, deltaPixels);
+        }
+        else
+        {
+            // Fallback: single clip drag (direct modification)
+            double deltaTime = deltaPixels / pixelsPerSecond;
+            Clip data = c->getClipData();
+            double newTime = juce::jmax(0.0, data.startTime + deltaTime);
 
-        // Apply snap to grid (Shift held = disable snap)
-        bool shiftHeld = juce::ModifierKeys::getCurrentModifiers().isShiftDown();
-        if (snapEnabled && !shiftHeld)
-            newTime = snapToGrid(newTime);
+            bool shiftHeld = juce::ModifierKeys::getCurrentModifiers().isShiftDown();
+            if (snapEnabled && !shiftHeld)
+                newTime = snapToGrid(newTime);
 
-        data.startTime = newTime;
-        c->setClipData(data);
-        layoutClips();
+            data.startTime = newTime;
+            c->setClipData(data);
+            layoutClips();
+        }
     };
 
     clip->onDragToNewTrack = [this](ClipComponent* c, int trackDelta)
@@ -167,6 +175,68 @@ void TrackLane::addClipComponent(const Clip& clipData, juce::AudioThumbnail* thu
     {
         if (onClipDuplicate)
             onClipDuplicate(this, c);
+    };
+
+    clip->onDragStart = [this](ClipComponent* c)
+    {
+        if (onClipDragStart)
+            onClipDragStart(this, c);
+    };
+
+    clip->onDragEnd = [this](ClipComponent* c)
+    {
+        if (onClipDragEnd)
+            onClipDragEnd(this, c);
+    };
+
+    clip->onTrim = [this](ClipComponent* c, bool isLeftEdge, double deltaPixels)
+    {
+        if (onClipTrim)
+        {
+            onClipTrim(this, c, isLeftEdge, deltaPixels);
+        }
+        else
+        {
+            // Fallback: direct modification
+            double deltaTime = deltaPixels / pixelsPerSecond;
+            Clip data = c->getClipData();
+
+            bool shiftHeld = juce::ModifierKeys::getCurrentModifiers().isShiftDown();
+
+            if (isLeftEdge)
+            {
+                // Trim left: adjust startTime, sourceStartOffset, duration
+                double newStart = juce::jmax(0.0, data.startTime + deltaTime);
+                if (snapEnabled && !shiftHeld)
+                    newStart = snapToGrid(newStart);
+
+                double startDelta = newStart - data.startTime;
+                double newDuration = data.duration - startDelta;
+
+                // Prevent trimming past end or into negative sourceOffset
+                if (newDuration > 0.1 && (data.sourceStartOffset + startDelta) >= 0.0)
+                {
+                    data.startTime = newStart;
+                    data.sourceStartOffset += startDelta;
+                    data.duration = newDuration;
+                }
+            }
+            else
+            {
+                // Trim right: adjust duration only
+                double newDuration = juce::jmax(0.1, data.duration + deltaTime);
+                if (snapEnabled && !shiftHeld)
+                {
+                    double newEnd = data.startTime + newDuration;
+                    newEnd = snapToGrid(newEnd);
+                    newDuration = newEnd - data.startTime;
+                }
+                data.duration = juce::jmax(0.1, newDuration);
+            }
+
+            c->setClipData(data);
+            layoutClips();
+        }
     };
 
     addAndMakeVisible(*clip);

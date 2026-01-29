@@ -82,6 +82,27 @@ void ClipComponent::paint(juce::Graphics& g)
         g.setColour(clipData.colour.darker(0.4f));
         g.drawRoundedRectangle(bounds.reduced(1), Theme::cornerRadiusSm, 1.0f);
     }
+
+    // Trim handles visual feedback
+    if (hoveredEdge != EdgeHover::None || trimming)
+    {
+        auto handleColour = Theme::Colours::accent().withAlpha(0.7f);
+        auto handleWidth = static_cast<float>(edgeHitZone);
+
+        if (hoveredEdge == EdgeHover::Left || trimEdge == EdgeHover::Left)
+        {
+            auto leftHandle = bounds.withWidth(handleWidth);
+            g.setColour(handleColour);
+            g.fillRoundedRectangle(leftHandle, Theme::cornerRadiusSm);
+        }
+
+        if (hoveredEdge == EdgeHover::Right || trimEdge == EdgeHover::Right)
+        {
+            auto rightHandle = bounds.withTrimmedLeft(bounds.getWidth() - handleWidth);
+            g.setColour(handleColour);
+            g.fillRoundedRectangle(rightHandle, Theme::cornerRadiusSm);
+        }
+    }
 }
 
 void ClipComponent::resized()
@@ -160,19 +181,55 @@ void ClipComponent::mouseDown(const juce::MouseEvent& e)
     dragStart = e.getPosition();
     dragStartScreen = e.getScreenPosition();
     verticalDragActive = false;
-    dragging = true;
 
-    // Store Y center of parent track for vertical offset calculation
-    if (auto* parent = getParentComponent())
-        initialTrackY = parent->getScreenY() + parent->getHeight() / 2;
+    // Check if we're starting a trim operation
+    if (hoveredEdge != EdgeHover::None)
+    {
+        trimming = true;
+        trimEdge = hoveredEdge;
+        dragging = false;
+
+        // Store initial value for trimming
+        if (trimEdge == EdgeHover::Left)
+            trimStartValue = clipData.startTime;
+        else
+            trimStartValue = clipData.duration;
+    }
+    else
+    {
+        trimming = false;
+        dragging = true;
+
+        // Store Y center of parent track for vertical offset calculation
+        if (auto* parent = getParentComponent())
+            initialTrackY = parent->getScreenY() + parent->getHeight() / 2;
+
+        // Notify drag start
+        if (onDragStart)
+            onDragStart(this);
+    }
 }
 
 void ClipComponent::mouseDrag(const juce::MouseEvent& e)
 {
+    int deltaX = e.getPosition().x - dragStart.x;
+
+    // Handle trim operation
+    if (trimming)
+    {
+        if (onTrim && std::abs(deltaX) > 1)
+        {
+            bool isLeftEdge = (trimEdge == EdgeHover::Left);
+            onTrim(this, isLeftEdge, static_cast<double>(deltaX));
+            dragStart = e.getPosition();
+        }
+        return;
+    }
+
+    // Normal drag operation
     if (!dragging)
         return;
 
-    int deltaX = e.getPosition().x - dragStart.x;
     int screenY = e.getScreenPosition().y;
 
     // Detect vertical drag (crossing into another track)
@@ -201,7 +258,20 @@ void ClipComponent::mouseDrag(const juce::MouseEvent& e)
 
 void ClipComponent::mouseUp(const juce::MouseEvent& /*e*/)
 {
-    dragging = false;
+    if (trimming)
+    {
+        trimming = false;
+        trimEdge = EdgeHover::None;
+    }
+
+    if (dragging)
+    {
+        dragging = false;
+
+        // Notify drag end
+        if (onDragEnd)
+            onDragEnd(this);
+    }
 }
 
 void ClipComponent::mouseEnter(const juce::MouseEvent& /*e*/)
@@ -210,8 +280,36 @@ void ClipComponent::mouseEnter(const juce::MouseEvent& /*e*/)
     repaint();
 }
 
+void ClipComponent::mouseMove(const juce::MouseEvent& e)
+{
+    auto x = e.getPosition().x;
+    EdgeHover newEdge = EdgeHover::None;
+
+    if (x < edgeHitZone)
+        newEdge = EdgeHover::Left;
+    else if (x > getWidth() - edgeHitZone)
+        newEdge = EdgeHover::Right;
+
+    if (newEdge != hoveredEdge)
+    {
+        hoveredEdge = newEdge;
+        updateMouseCursor();
+        repaint();  // Visual feedback for trim zones
+    }
+}
+
 void ClipComponent::mouseExit(const juce::MouseEvent& /*e*/)
 {
     hovered = false;
+    hoveredEdge = EdgeHover::None;
+    updateMouseCursor();
     repaint();
+}
+
+void ClipComponent::updateMouseCursor()
+{
+    if (hoveredEdge != EdgeHover::None)
+        setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+    else
+        setMouseCursor(juce::MouseCursor::NormalCursor);
 }

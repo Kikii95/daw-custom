@@ -22,6 +22,7 @@ public:
         virtual void transportStateChanged(State newState) = 0;
         virtual void transportPositionChanged(double newPosition) {}
         virtual void transportLoopChanged(bool enabled, double start, double end) {}
+        virtual void tempoChanged(double newBpm) {}
     };
 
     TransportController();
@@ -80,6 +81,7 @@ private:
     void notifyStateChanged();
     void notifyPositionChanged();
     void notifyLoopChanged();
+    void notifyTempoChanged();
 
     std::atomic<State> state { State::Stopped };
     std::atomic<double> position { 0.0 };

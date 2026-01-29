@@ -25,6 +25,11 @@ public:
 
     int getNumClips() const { return static_cast<int>(clips.size()); }
     AudioClip* getClip(int index);
+    AudioClip* getClip(const juce::Uuid& clipId);
+
+    // Update clip timing (for trim operations)
+    void updateClipTiming(const juce::Uuid& clipId, double newStartTime,
+                          double newDuration, double newSourceOffset);
 
     // Track properties
     void setVolume(float vol) { volume.store(juce::jmax(0.0f, vol)); }

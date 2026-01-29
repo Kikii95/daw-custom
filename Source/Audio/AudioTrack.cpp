@@ -159,6 +159,34 @@ AudioClip* AudioTrack::getClip(int index)
     return nullptr;
 }
 
+AudioClip* AudioTrack::getClip(const juce::Uuid& clipId)
+{
+    juce::ScopedLock sl(clipLock);
+
+    for (auto& clip : clips)
+    {
+        if (clip->getClipData().id == clipId)
+            return clip.get();
+    }
+
+    return nullptr;
+}
+
+void AudioTrack::updateClipTiming(const juce::Uuid& clipId, double newStartTime,
+                                   double newDuration, double newSourceOffset)
+{
+    juce::ScopedLock sl(clipLock);
+
+    for (auto& clip : clips)
+    {
+        if (clip->getClipData().id == clipId)
+        {
+            clip->updateTiming(newStartTime, newDuration, newSourceOffset);
+            break;
+        }
+    }
+}
+
 void AudioTrack::setPosition(juce::int64 positionInSamples)
 {
     position.store(positionInSamples);

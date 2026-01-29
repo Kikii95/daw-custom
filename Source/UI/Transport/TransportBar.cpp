@@ -88,8 +88,11 @@ TransportBar::TransportBar()
     tempoSlider.setTooltip("Tempo: 20-300 BPM");
     tempoSlider.onValueChange = [this]()
     {
+        double bpm = tempoSlider.getValue();
         if (transport != nullptr)
-            transport->setTempo(tempoSlider.getValue());
+            transport->setTempo(bpm);
+        if (onTempoChanged)
+            onTempoChanged(bpm);
     };
     addAndMakeVisible(tempoSlider);
 
@@ -108,6 +111,39 @@ TransportBar::TransportBar()
             transport->setPlaybackSpeed(speedSlider.getValue());
     };
     addAndMakeVisible(speedSlider);
+
+    // Snap selector
+    snapLabel.setColour(juce::Label::textColourId, Theme::Colours::textMuted());
+    addAndMakeVisible(snapLabel);
+
+    snapCombo.addItem("Off", 1);
+    snapCombo.addItem("Bar", 2);
+    snapCombo.addItem("Beat", 3);
+    snapCombo.addItem("1/2", 4);
+    snapCombo.addItem("1/4", 5);
+    snapCombo.addItem("1/8", 6);
+    snapCombo.addItem("1/16", 7);
+    snapCombo.setSelectedId(7);  // Default: 1/16
+    snapCombo.setTooltip("Snap grid resolution (G to toggle on/off)");
+    snapCombo.onChange = [this]()
+    {
+        int snapIndex = snapCombo.getSelectedId() - 1;  // Convert to 0-based
+        if (onSnapValueChanged)
+            onSnapValueChanged(snapIndex);
+    };
+    addAndMakeVisible(snapCombo);
+
+    // Position display mode toggle
+    displayModeButton.setColour(juce::TextButton::buttonColourId, Theme::colour(Theme::bgSlot));
+    displayModeButton.setColour(juce::TextButton::textColourOffId, Theme::Colours::textMuted());
+    displayModeButton.setTooltip("Toggle between Time (MM:SS) and Beats (Bar:Beat:Tick)");
+    displayModeButton.onClick = [this]()
+    {
+        showBeats = !showBeats;
+        displayModeButton.setButtonText(showBeats ? "Beats" : "Time");
+        updatePositionDisplay();
+    };
+    addAndMakeVisible(displayModeButton);
 
     // Start timer for position updates
     startTimerHz(30);
@@ -140,10 +176,19 @@ void TransportBar::resized()
     speedLabel.setBounds(speedArea.removeFromLeft(45));
     speedSlider.setBounds(speedArea);
 
+    // Snap selector
+    auto snapArea = bounds.removeFromRight(110);
+    snapLabel.setBounds(snapArea.removeFromLeft(35));
+    snapCombo.setBounds(snapArea);
+
     // Tempo
     auto tempoArea = bounds.removeFromRight(180);
     tempoLabel.setBounds(tempoArea.removeFromLeft(35));
     tempoSlider.setBounds(tempoArea);
+
+    // Display mode toggle (small button)
+    auto modeArea = bounds.removeFromRight(50);
+    displayModeButton.setBounds(modeArea.reduced(2));
 
     // Position in center
     auto posArea = bounds.reduced(20, 0);
@@ -268,8 +313,16 @@ void TransportBar::updatePositionDisplay()
     if (transport == nullptr)
         return;
 
-    positionLabel.setText(formatTime(transport->getPosition()), juce::dontSendNotification);
-    durationLabel.setText("/ " + formatTime(transport->getDuration()), juce::dontSendNotification);
+    if (showBeats)
+    {
+        positionLabel.setText(formatTimeAsBeats(transport->getPosition()), juce::dontSendNotification);
+        durationLabel.setText("/ " + formatTimeAsBeats(transport->getDuration()), juce::dontSendNotification);
+    }
+    else
+    {
+        positionLabel.setText(formatTime(transport->getPosition()), juce::dontSendNotification);
+        durationLabel.setText("/ " + formatTime(transport->getDuration()), juce::dontSendNotification);
+    }
 }
 
 juce::String TransportBar::formatTime(double seconds) const
@@ -279,4 +332,57 @@ juce::String TransportBar::formatTime(double seconds) const
     int millis = static_cast<int>((seconds - std::floor(seconds)) * 1000);
 
     return juce::String::formatted("%02d:%02d.%03d", minutes, secs, millis);
+}
+
+juce::String TransportBar::formatTimeAsBeats(double seconds) const
+{
+    double bpm = tempoSlider.getValue();
+    if (bpm <= 0.0)
+        bpm = 120.0;
+
+    double beatDuration = 60.0 / bpm;
+    double barDuration = beatDuration * timeSignatureNum;
+
+    // Calculate bar (1-based)
+    int bars = static_cast<int>(seconds / barDuration) + 1;
+
+    // Calculate beat within bar (1-based)
+    double remaining = std::fmod(seconds, barDuration);
+    int beats = static_cast<int>(remaining / beatDuration) + 1;
+
+    // Calculate ticks within beat (0-959, standard 960 PPQ)
+    double beatRemainder = std::fmod(remaining, beatDuration);
+    int ticks = static_cast<int>((beatRemainder / beatDuration) * 960);
+
+    return juce::String::formatted("%d:%d:%03d", bars, beats, ticks);
+}
+
+void TransportBar::tempoChanged(double newBpm)
+{
+    juce::MessageManager::callAsync([this, newBpm]()
+    {
+        tempoSlider.setValue(newBpm, juce::dontSendNotification);
+    });
+}
+
+void TransportBar::setTempo(double bpm)
+{
+    tempoSlider.setValue(bpm, juce::dontSendNotification);
+}
+
+void TransportBar::setSnapValue(int snapIndex)
+{
+    snapCombo.setSelectedId(snapIndex + 1, juce::dontSendNotification);
+}
+
+int TransportBar::getSnapValue() const
+{
+    return snapCombo.getSelectedId() - 1;
+}
+
+void TransportBar::setTimeSignature(int numerator, int denominator)
+{
+    timeSignatureNum = numerator;
+    timeSignatureDenom = denominator;
+    updatePositionDisplay();
 }

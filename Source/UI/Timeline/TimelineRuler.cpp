@@ -10,7 +10,12 @@ void TimelineRuler::paint(juce::Graphics& g)
     // Background
     g.fillAll(Theme::colour(Theme::bgPanel));
 
-    drawTimeTicks(g);
+    // Draw grid: beats or time-based
+    if (showBeats)
+        drawBeatTicks(g);
+    else
+        drawTimeTicks(g);
+
     drawLoopMarkers(g);
     drawPlayhead(g);
 
@@ -78,6 +83,76 @@ void TimelineRuler::drawTimeTicks(juce::Graphics& g)
             // Minor tick
             g.setColour(Theme::colour(Theme::borderLight));
             g.drawVerticalLine(static_cast<int>(x), height * 0.6f, height);
+        }
+    }
+}
+
+void TimelineRuler::drawBeatTicks(juce::Graphics& g)
+{
+    float height = static_cast<float>(getHeight());
+
+    // Calculate beat and bar durations
+    double beatDuration = 60.0 / tempo;  // seconds per beat
+    double barDuration = beatDuration * timeSignatureNum;
+
+    // Determine subdivisions based on zoom level
+    // At low zoom, show bars only; at high zoom, show 1/16 notes
+    int subdivisionsPerBeat = 1;
+    if (pixelsPerSecond * beatDuration > 30)
+        subdivisionsPerBeat = 2;  // 1/8 notes
+    if (pixelsPerSecond * beatDuration > 60)
+        subdivisionsPerBeat = 4;  // 1/16 notes
+
+    double subdivisionDuration = beatDuration / subdivisionsPerBeat;
+
+    // Find starting bar
+    double startBar = std::floor(visibleStart / barDuration);
+    double startTime = startBar * barDuration;
+
+    g.setFont(10.0f);
+
+    // Draw subdivisions, beats, and bars
+    for (double t = startTime; t <= visibleEnd + barDuration; t += subdivisionDuration)
+    {
+        if (t < 0) continue;
+
+        float x = static_cast<float>(headerOffset + (t - visibleStart) * pixelsPerSecond);
+
+        // Skip if outside visible area
+        if (x < headerOffset - 40 || x > getWidth() + 40)
+            continue;
+
+        // Determine tick type
+        double timeInBar = std::fmod(t + 0.0001, barDuration);  // Small offset to avoid floating point issues
+        double timeInBeat = std::fmod(t + 0.0001, beatDuration);
+
+        bool isBarLine = timeInBar < 0.001;
+        bool isBeatLine = timeInBeat < 0.001;
+
+        if (isBarLine)
+        {
+            // Bar line (thickest, with label)
+            int barNum = static_cast<int>(std::round(t / barDuration)) + 1;
+
+            g.setColour(Theme::Colours::text());
+            g.drawVerticalLine(static_cast<int>(x), height * 0.2f, height);
+
+            // Bar number label
+            g.drawText(juce::String(barNum),
+                       static_cast<int>(x) + 4, 2, 30, 14,
+                       juce::Justification::left);
+        }
+        else if (isBeatLine)
+        {
+            // Beat line (medium)
+            g.setColour(Theme::Colours::textMuted().withAlpha(0.7f));
+            g.drawVerticalLine(static_cast<int>(x), height * 0.45f, height);
+        }
+        else
+        {
+            // Subdivision line (light)
+            g.setColour(Theme::colour(Theme::borderLight).withAlpha(0.5f));
+            g.drawVerticalLine(static_cast<int>(x), height * 0.7f, height);
         }
     }
 }

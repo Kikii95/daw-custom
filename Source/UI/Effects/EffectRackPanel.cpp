@@ -181,6 +181,24 @@ void EffectRackPanel::updateEffectSlots()
             showPresetBrowser(index);
         };
 
+        slot->onReorder = [this](int fromIndex, int toIndex)
+        {
+            if (!currentTrack)
+                return;
+
+            auto& chain = currentTrack->getEffectChain();
+            int numEffects = chain.getNumEffects();
+
+            // Clamp target index
+            toIndex = juce::jlimit(0, numEffects - 1, toIndex);
+
+            if (fromIndex != toIndex && fromIndex >= 0 && fromIndex < numEffects)
+            {
+                chain.moveEffect(fromIndex, toIndex);
+                refreshEffects();
+            }
+        };
+
         effectContainer.addAndMakeVisible(slot.get());
         effectSlots.push_back(std::move(slot));
     }
@@ -509,4 +527,13 @@ void EffectRackPanel::showPresetBrowser(int effectIndex)
         nullptr);
 
     (void)cb; // suppress unused warning
+}
+
+void EffectRackPanel::setTempo(double bpm)
+{
+    currentTempo = bpm;
+
+    // Propagate to all effect slots (for delay tempo sync)
+    for (auto& slot : effectSlots)
+        slot->setTempo(bpm);
 }

@@ -82,6 +82,23 @@ public:
     std::vector<Track>& getTracks() { return tracks; }
     const std::vector<Track>& getTracks() const { return tracks; }
 
+    void moveTrack(int fromIndex, int toIndex)
+    {
+        auto numTracks = static_cast<int>(tracks.size());
+        if (fromIndex < 0 || fromIndex >= numTracks ||
+            toIndex < 0 || toIndex >= numTracks ||
+            fromIndex == toIndex)
+            return;
+
+        Track track = std::move(tracks[static_cast<size_t>(fromIndex)]);
+        tracks.erase(tracks.begin() + fromIndex);
+
+        if (toIndex > fromIndex)
+            --toIndex;
+
+        tracks.insert(tracks.begin() + toIndex, std::move(track));
+    }
+
     // Project duration (longest track)
     double getTotalDuration() const
     {

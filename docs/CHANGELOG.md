@@ -53,6 +53,33 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Advanced Editing & BPM Workflow (Sprint E)
+
+**Clip Editing**
+- Split clip at playhead (Ctrl+B) or at click position (Alt+Click)
+- Trim handles on clip edges: drag left/right edges to adjust duration
+- Paste at last click position (5s timeout) instead of playhead only
+- Copy/Paste clips maintains relative timing
+
+**BPM & Beat Grid**
+- BPM synchronization between Project ↔ TransportController ↔ Timeline
+- Beat grid on ruler: bar lines (thick) + beat lines (thin) with bar numbers
+- Beat-based snap: 1/Bar, 1/Beat, 1/2, 1/4, 1/8, 1/16 note values
+- Snap selector dropdown in TransportBar
+- Position display toggle: MM:SS.ms ↔ Bar:Beat:Tick (960 PPQ)
+
+**Delay Tempo Sync**
+- Sync button + note value selector (1/2, 1/4, 1/8, 1/16, dotted) in Delay effect
+- Auto-calculate delay time from BPM and note value
+- Tempo propagation to EffectRackPanel → EffectSlotComponent
+
+**UI/UX**
+- Trim cursor (↔) when hovering clip edges
+- Visual feedback on trim zones
+- Click position tracking for paste operations
+
+---
+
 ### Added — UX Overhaul (Sprint 19)
 - **Transport icons**: Path drawing (triangle, bars, square) instead of UTF-8 characters
 - **Drop to specific track**: Audio files drop on the track under cursor

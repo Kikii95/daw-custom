@@ -10,6 +10,7 @@
 /**
  * UI component for a single effect slot.
  * Displays effect name, bypass toggle, remove button, and dynamic parameter controls.
+ * Supports drag & drop for reordering effects.
  */
 class EffectSlotComponent : public juce::Component
 {
@@ -19,6 +20,11 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+    // Mouse handling for drag reorder
+    void mouseDown(const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
 
     // Bind to an effect
     void setEffect(EffectSlot* effect, int index);
@@ -31,6 +37,10 @@ public:
     std::function<void(int)> onRemoveClicked;
     std::function<void(int)> onEditClicked;  // For VST3 plugin UI
     std::function<void(int)> onPresetClicked;  // Open preset browser
+    std::function<void(int, int)> onReorder;  // (fromIndex, toIndex) for drag reorder
+
+    // Tempo sync for delay (optional)
+    void setTempo(double bpm);
 
     // Height calculation for layout
     int getPreferredHeight() const;
@@ -59,10 +69,22 @@ private:
     };
     std::vector<ParamControl> paramControls;
 
+    // Tempo sync (for Delay effect)
+    juce::ToggleButton syncButton { "Sync" };
+    juce::ComboBox noteValueCombo;
+    bool isDelayEffect = false;
+    double currentTempo = 120.0;
+
+    // Drag state
+    bool dragging = false;
+    juce::Point<int> dragStartPos;
+    int dragStartY = 0;
+
     // Styling constants
     static constexpr int headerHeight = 32;
     static constexpr int paramRowHeight = 50;
     static constexpr int padding = 4;
+    static constexpr int dragHandleWidth = 20;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectSlotComponent)
 };

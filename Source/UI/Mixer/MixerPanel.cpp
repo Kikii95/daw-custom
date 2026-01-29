@@ -113,10 +113,12 @@ void MixerPanel::refreshChannels()
     if (project == nullptr)
         return;
 
+    int index = 0;
     for (const auto& track : project->getTracks())
     {
         auto strip = std::make_unique<ChannelStrip>();
         strip->setTrackData(track);
+        strip->setChannelIndex(index);
 
         // Connect callbacks
         strip->onVolumeChanged = [this](juce::Uuid id, float vol)
@@ -148,8 +150,21 @@ void MixerPanel::refreshChannels()
             selectTrack(id);
         };
 
+        strip->onReorder = [this](int fromIndex, int toIndex)
+        {
+            int numStrips = static_cast<int>(channelStrips.size());
+            toIndex = juce::jlimit(0, numStrips - 1, toIndex);
+
+            if (fromIndex != toIndex && fromIndex >= 0 && fromIndex < numStrips)
+            {
+                if (onTrackReordered)
+                    onTrackReordered(fromIndex, toIndex);
+            }
+        };
+
         stripContainer.addAndMakeVisible(*strip);
         channelStrips.push_back(std::move(strip));
+        ++index;
     }
 
     resized();
