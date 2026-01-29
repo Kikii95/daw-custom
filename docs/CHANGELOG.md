@@ -53,6 +53,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Core Functionality (Sprint 14)
+- Audio playback: Buffer now properly loaded into AudioClip and added to AudioTrack
+- Track renaming: Double-click on track header to edit name inline
+- Timeline ruler: Aligned with clip start position (headerWidth offset)
+
+### Added — Project Infrastructure (Sprint 14)
+- Unit test framework: JUCE UnitTest with AudioTests.cpp
+- CMakeLists.txt: BUILD_TESTS option with DAWCustomTests target
+- Pre-commit hooks: trailing-whitespace, clang-format, cmake-lint
+- Documentation: architecture.md, quickstart.md
+- Compliance: LICENSE (GPL-3.0), CONTRIBUTING.md, SECURITY.md
+- Audit score: 6/18 → 16/18 (Grade S Gold)
+
 ### Added — UI/UX Pro-Level Overhaul (Sprint 13)
 
 **Theme System Enhancement**

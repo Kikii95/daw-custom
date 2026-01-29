@@ -85,6 +85,27 @@
 
 ---
 
+## 🏗️ Phase 6 : Infrastructure & Quality ✅
+
+### Sprint 14 — Bug Fixes ✅
+- [x] Fix audio playback (buffer loading into AudioClip)
+- [x] Fix track renaming (double-click inline edit)
+- [x] Fix timeline ruler alignment (headerWidth offset)
+
+### Sprint 14 — Audit v14 Remediation ✅
+- [x] Unit test framework (JUCE UnitTest)
+- [x] tests/ directory + Source/Tests/
+- [x] CMakeLists.txt BUILD_TESTS option
+- [x] .pre-commit-config.yaml
+- [x] LICENSE (GPL-3.0)
+- [x] CONTRIBUTING.md
+- [x] SECURITY.md
+- [x] docs/architecture.md
+- [x] docs/quickstart.md
+- [x] **Audit: 6/18 → 16/18 (Grade S Gold)**
+
+---
+
 ## 💡 Ideas (Backlog Long Terme)
 
 - [ ] Piano roll / MIDI editor

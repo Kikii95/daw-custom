@@ -75,6 +75,14 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
   - Modal overlay with animations
   - CI/CD GitHub Actions (Linux + Windows)
 
+- [x] **Sprint 14 : Bug Fixes + Infrastructure** ✅
+  - Fix audio playback (buffer → AudioClip → AudioTrack)
+  - Fix track renaming (double-click inline edit)
+  - Fix timeline ruler alignment
+  - Unit test framework (JUCE UnitTest)
+  - Audit v14 remediation: 6/18 → 16/18 (Grade S Gold)
+  - LICENSE, CONTRIBUTING, SECURITY, docs
+
 ---
 
 ## Q2-Q3 2026 — Polish
