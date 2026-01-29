@@ -45,6 +45,10 @@ MainComponent::MainComponent()
     // Set up effect rack panel
     addAndMakeVisible(effectRackPanel);
 
+    // Set up asset browser
+    assetBrowser.setFormatManager(&fileLoader.getFormatManager());
+    addAndMakeVisible(assetBrowser);
+
     // Connect callbacks
     connectCallbacks();
 
@@ -89,6 +93,10 @@ void MainComponent::resized()
     // Effect rack on right
     auto effectRackWidth = 250;
     effectRackPanel.setBounds(bounds.removeFromRight(effectRackWidth));
+
+    // Asset browser on left
+    auto assetBrowserWidth = 200;
+    assetBrowser.setBounds(bounds.removeFromLeft(assetBrowserWidth));
 
     // Mixer at bottom
     auto mixerHeight = 200;
@@ -459,6 +467,13 @@ void MainComponent::connectCallbacks()
     effectRackPanel.onEffectParameterChanged = [this](juce::Uuid /*trackId*/, int /*index*/, int /*paramIndex*/, float /*value*/)
     {
         project->setModified(true);
+    };
+
+    // Asset browser callbacks
+    assetBrowser.onFileDoubleClicked = [this](const juce::File& file)
+    {
+        // Import file on double-click
+        filesDropped({ file.getFullPathName() }, 0, 0);
     };
 }
 

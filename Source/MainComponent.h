@@ -11,6 +11,7 @@
 #include "UI/Timeline/TimelinePanel.h"
 #include "UI/Mixer/MixerPanel.h"
 #include "UI/Effects/EffectRackPanel.h"
+#include "UI/Assets/AssetBrowser.h"
 #include "UI/Theme/ModernLookAndFeel.h"
 #include <memory>
 
@@ -65,6 +66,7 @@ private:
     TimelinePanel timelinePanel;
     MixerPanel mixerPanel;
     EffectRackPanel effectRackPanel;
+    AssetBrowser assetBrowser;
 
     // Helper to find AudioTrack by ID
     AudioTrack* getAudioTrackById(const juce::Uuid& id);

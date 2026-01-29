@@ -58,6 +58,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Track selection Timeline**: Added mouseDown() to TrackLane with selection highlight
 - **Timeline↔Mixer sync**: Track selection in timeline now syncs with mixer and effect rack
 
+### Added — Asset Browser (Sprint 16)
+- **AssetBrowser component**: Unity-style file browser on left panel
+- **File tree**: DirectoryContentsList with audio file filtering
+- **Recent files**: ListBox with last 10 imported files
+- **Folder bookmarks**: Quick access to Music, Downloads, Desktop, Home
+- **Double-click import**: Files imported directly on double-click
+- **Drag support**: Files can be dragged from browser
+
 ### Added — UX Improvements (Sprint 15)
 - **Auto-select first track**: First track auto-selected on startup, effect rack populated
 - **Clip tooltips**: Hover clips shows name + duration (via SettableTooltipClient)

@@ -92,6 +92,9 @@ target_sources(DAWCustom
         Source/UI/Plugins/GenericPluginEditor.cpp
         Source/UI/Plugins/PluginBrowser.cpp
 
+        # UI - Assets
+        Source/UI/Assets/AssetBrowser.cpp
+
         # UI - Theme
         Source/UI/Theme/ModernLookAndFeel.cpp
         Source/UI/Theme/DrawingHelpers.cpp

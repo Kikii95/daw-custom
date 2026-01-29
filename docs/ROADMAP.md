@@ -93,6 +93,10 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
   - Track selection in Timeline + sync
   - Clip tooltips + hover effects
   - Auto-select first track
+- [x] **Sprint 16 : Asset Browser** ✅
+  - File tree with audio filtering
+  - Recent files + bookmarks
+  - Double-click import
 
 ---
 

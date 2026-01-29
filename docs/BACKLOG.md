@@ -117,6 +117,14 @@
 - [x] Clip tooltips (name + duration)
 - [x] Clip hover effect (subtle glow)
 
+### Sprint 16 — Asset Browser ✅
+- [x] AssetBrowser component (left panel)
+- [x] File tree with audio file filtering
+- [x] Recent files list (last 10)
+- [x] Folder bookmarks (Music, Downloads, Desktop, Home)
+- [x] Double-click to import
+- [x] Drag support from browser
+
 ---
 
 ## 💡 Ideas (Backlog Long Terme)
