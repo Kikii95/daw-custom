@@ -150,6 +150,23 @@
 
 ---
 
+## 🎨 Phase 9 : UX Overhaul ✅
+
+### Sprint 19 — Drag-Drop & Context Menus ✅
+- [x] Fix transport icons (Path drawing instead of UTF-8)
+- [x] Fix button states after playback ends
+- [x] Fix UTF-8 encoding issues (em-dash in EffectRack/Mixer)
+- [x] Wire track rename callback (Timeline → Mixer → AudioEngine)
+- [x] Drop to specific track from coordinates
+- [x] Create 8 default tracks on new project
+- [x] Visual drop zone feedback (track highlight on drag)
+- [x] Clip inter-track dragging (vertical drag)
+- [x] Keyboard shortcuts (Space, M, S, Ctrl+S/O/N/T)
+- [x] Context menus (clips: Delete/Duplicate, tracks: Rename/Color/Delete)
+- [x] Track colour picker (12-colour palette)
+
+---
+
 ## 💡 Ideas (Backlog Long Terme)
 
 - [ ] Piano roll / MIDI editor

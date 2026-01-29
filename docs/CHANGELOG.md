@@ -53,6 +53,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — UX Overhaul (Sprint 19)
+- **Transport icons**: Path drawing (triangle, bars, square) instead of UTF-8 characters
+- **Drop to specific track**: Audio files drop on the track under cursor
+- **Visual drop feedback**: Track highlight during drag operation
+- **Clip inter-track dragging**: Vertical drag moves clips between tracks
+- **8 default tracks**: New projects start with 8 color-coded tracks
+- **Context menus**:
+  - Clips: Delete, Duplicate (right-click)
+  - Tracks: Rename, Change Colour, Delete (right-click header)
+- **Keyboard shortcuts**:
+  - Space: Play/Pause
+  - Enter: Stop
+  - Home: Go to start
+  - M: Mute selected track
+  - S: Solo selected track
+  - Ctrl+S/O/N/T: Save, Open, New, Add Track
+- **Track colour picker**: 12-colour palette in context menu
+- **TrackColours::getName()**: Colour names for picker menu
+
+### Fixed — UX Bugs (Sprint 19)
+- **Transport button states**: Stop button enabled when position > 0, Play resets position when at end
+- **Track rename propagation**: Callback chain from Timeline to Mixer to AudioEngine
+- **UTF-8 encoding**: Replaced em-dash `\xe2\x80\x94` with `-` in EffectRack and Mixer
+
 ### Added — Project Persistence (Sprint 17)
 - **ProjectSerializer**: JSON-based project save/load system
   - .dawc file format with version tracking

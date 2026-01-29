@@ -107,6 +107,21 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 
 ---
 
+## Q1 2026 — UX Overhaul ✅
+
+### Janvier
+- [x] **Sprint 19 : Drag-Drop & Context Menus** ✅
+  - Transport icons (Path drawing)
+  - Drop to specific track
+  - Visual drop feedback
+  - Clip inter-track dragging
+  - 8 default tracks
+  - Context menus (clips/tracks)
+  - Keyboard shortcuts (Space, M, S, Ctrl+S/O/N/T)
+  - Track colour picker
+
+---
+
 ## Q2-Q3 2026 — Polish
 
 ### Février-Mars
