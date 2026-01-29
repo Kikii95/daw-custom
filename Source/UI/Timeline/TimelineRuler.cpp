@@ -11,6 +11,7 @@ void TimelineRuler::paint(juce::Graphics& g)
     g.fillAll(Theme::colour(Theme::bgPanel));
 
     drawTimeTicks(g);
+    drawLoopMarkers(g);
     drawPlayhead(g);
 
     // Bottom border
@@ -98,4 +99,190 @@ void TimelineRuler::drawPlayhead(juce::Graphics& g)
 
     // Vertical line
     g.drawVerticalLine(static_cast<int>(x), 10.0f, static_cast<float>(getHeight()));
+}
+
+void TimelineRuler::drawLoopMarkers(juce::Graphics& g)
+{
+    if (!loopEnabled || loopEnd <= loopStart)
+        return;
+
+    float height = static_cast<float>(getHeight());
+    int xStart = timeToX(loopStart);
+    int xEnd = timeToX(loopEnd);
+
+    // Skip if completely outside visible area
+    if (xEnd < headerOffset || xStart > getWidth())
+        return;
+
+    // Clamp to visible area
+    xStart = juce::jmax(headerOffset, xStart);
+    xEnd = juce::jmin(getWidth(), xEnd);
+
+    // Loop region background (semi-transparent)
+    auto loopColour = Theme::Colours::accent();
+    g.setColour(loopColour.withAlpha(0.15f));
+    g.fillRect(xStart, 0, xEnd - xStart, static_cast<int>(height));
+
+    // Loop start marker (left bracket)
+    g.setColour(loopColour);
+    g.fillRect(xStart, 0, 3, static_cast<int>(height));
+
+    // Loop start triangle
+    juce::Path startTriangle;
+    float sx = static_cast<float>(xStart);
+    startTriangle.addTriangle(sx, 0, sx + 8, 0, sx, 8);
+    g.fillPath(startTriangle);
+
+    // Loop end marker (right bracket)
+    g.fillRect(xEnd - 3, 0, 3, static_cast<int>(height));
+
+    // Loop end triangle
+    juce::Path endTriangle;
+    float ex = static_cast<float>(xEnd);
+    endTriangle.addTriangle(ex, 0, ex - 8, 0, ex, 8);
+    g.fillPath(endTriangle);
+
+    // Top bar connecting markers
+    g.fillRect(xStart, 0, xEnd - xStart, 2);
+}
+
+void TimelineRuler::setLoopEnabled(bool enabled)
+{
+    loopEnabled = enabled;
+    repaint();
+}
+
+void TimelineRuler::setLoopRange(double start, double end)
+{
+    loopStart = start;
+    loopEnd = end;
+    repaint();
+}
+
+double TimelineRuler::xToTime(int x) const
+{
+    return visibleStart + static_cast<double>(x - headerOffset) / pixelsPerSecond;
+}
+
+int TimelineRuler::timeToX(double time) const
+{
+    return headerOffset + static_cast<int>((time - visibleStart) * pixelsPerSecond);
+}
+
+TimelineRuler::DragTarget TimelineRuler::hitTestLoopMarker(int x) const
+{
+    if (!loopEnabled || loopEnd <= loopStart)
+        return DragTarget::None;
+
+    int xStart = timeToX(loopStart);
+    int xEnd = timeToX(loopEnd);
+    constexpr int hitTolerance = 8;
+
+    // Check if near loop start marker
+    if (std::abs(x - xStart) <= hitTolerance)
+        return DragTarget::LoopStart;
+
+    // Check if near loop end marker
+    if (std::abs(x - xEnd) <= hitTolerance)
+        return DragTarget::LoopEnd;
+
+    // Check if inside loop region (for dragging entire region)
+    if (x > xStart + hitTolerance && x < xEnd - hitTolerance)
+        return DragTarget::LoopRegion;
+
+    return DragTarget::None;
+}
+
+void TimelineRuler::mouseDown(const juce::MouseEvent& e)
+{
+    dragTarget = hitTestLoopMarker(e.x);
+
+    if (dragTarget != DragTarget::None)
+    {
+        dragStartTime = xToTime(e.x);
+        dragLoopStartOffset = loopStart;
+    }
+    else if (e.mods.isAltDown())
+    {
+        // Alt+click to set loop start
+        double time = xToTime(e.x);
+        loopStart = juce::jmax(0.0, time);
+        loopEnd = loopStart + 4.0;  // Default 4 second loop
+        loopEnabled = true;
+
+        if (onLoopRangeChanged)
+            onLoopRangeChanged(loopStart, loopEnd);
+
+        repaint();
+    }
+    else
+    {
+        // Click to set playhead position
+        double time = xToTime(e.x);
+        if (onPositionClicked)
+            onPositionClicked(juce::jmax(0.0, time));
+    }
+}
+
+void TimelineRuler::mouseDrag(const juce::MouseEvent& e)
+{
+    if (dragTarget == DragTarget::None)
+        return;
+
+    double time = xToTime(e.x);
+    double delta = time - dragStartTime;
+
+    switch (dragTarget)
+    {
+        case DragTarget::LoopStart:
+            loopStart = juce::jmax(0.0, juce::jmin(time, loopEnd - 0.1));
+            break;
+
+        case DragTarget::LoopEnd:
+            loopEnd = juce::jmax(loopStart + 0.1, time);
+            break;
+
+        case DragTarget::LoopRegion:
+        {
+            double duration = loopEnd - loopStart;
+            double newStart = juce::jmax(0.0, dragLoopStartOffset + delta);
+            loopStart = newStart;
+            loopEnd = newStart + duration;
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    if (onLoopRangeChanged)
+        onLoopRangeChanged(loopStart, loopEnd);
+
+    repaint();
+}
+
+void TimelineRuler::mouseUp(const juce::MouseEvent&)
+{
+    dragTarget = DragTarget::None;
+}
+
+void TimelineRuler::mouseMove(const juce::MouseEvent& e)
+{
+    auto target = hitTestLoopMarker(e.x);
+
+    switch (target)
+    {
+        case DragTarget::LoopStart:
+        case DragTarget::LoopEnd:
+            setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+            break;
+
+        case DragTarget::LoopRegion:
+            setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+            break;
+
+        default:
+            setMouseCursor(juce::MouseCursor::NormalCursor);
+            break;
+    }
 }

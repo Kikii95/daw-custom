@@ -21,6 +21,7 @@ public:
         virtual ~Listener() = default;
         virtual void transportStateChanged(State newState) = 0;
         virtual void transportPositionChanged(double newPosition) {}
+        virtual void transportLoopChanged(bool enabled, double start, double end) {}
     };
 
     TransportController();
@@ -50,6 +51,16 @@ public:
     void setDuration(double seconds);
     double getDuration() const;
 
+    // Loop points
+    void setLoopEnabled(bool enabled);
+    bool isLoopEnabled() const;
+    void setLoopStart(double timeInSeconds);
+    void setLoopEnd(double timeInSeconds);
+    double getLoopStart() const;
+    double getLoopEnd() const;
+    void setLoopRange(double start, double end);
+    void clearLoop();
+
     // Called from audio thread to advance position
     void advancePosition(int numSamples, double sampleRate);
 
@@ -60,11 +71,17 @@ public:
 private:
     void notifyStateChanged();
     void notifyPositionChanged();
+    void notifyLoopChanged();
 
     std::atomic<State> state { State::Stopped };
     std::atomic<double> position { 0.0 };
     std::atomic<double> tempo { 120.0 };
     std::atomic<double> duration { 0.0 };
+
+    // Loop state
+    std::atomic<bool> loopEnabled { false };
+    std::atomic<double> loopStart { 0.0 };
+    std::atomic<double> loopEnd { 0.0 };
 
     std::vector<Listener*> listeners;
     juce::CriticalSection listenerLock;

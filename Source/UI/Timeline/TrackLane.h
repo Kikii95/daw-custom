@@ -48,7 +48,7 @@ public:
     bool isDropTarget() const { return dropTarget; }
 
     // Callbacks
-    std::function<void(TrackLane*, ClipComponent*)> onClipSelected;
+    std::function<void(TrackLane*, ClipComponent*, bool addToSelection)> onClipSelected;
     std::function<void(TrackLane*, const juce::String&)> onTrackRenamed;
     std::function<void(TrackLane*)> onTrackSelected;
     std::function<void(TrackLane*, ClipComponent*, int)> onClipDraggedToTrack;  // trackDelta: -1 = up, +1 = down
@@ -61,6 +61,12 @@ public:
     void setWaveformCache(WaveformCache* cache) { waveformCache = cache; }
     void setFormatManager(juce::AudioFormatManager* manager) { formatManager = manager; }
 
+    // Snap to grid
+    void setSnapEnabled(bool enabled) { snapEnabled = enabled; }
+    bool isSnapEnabled() const { return snapEnabled; }
+    void setSnapInterval(double seconds) { snapInterval = juce::jmax(0.01, seconds); }
+    double getSnapInterval() const { return snapInterval; }
+
     // Header width accessor for ruler alignment
     static constexpr int getHeaderWidth() { return headerWidth; }
 
@@ -71,6 +77,9 @@ private:
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
     void textEditorEscapeKeyPressed(juce::TextEditor& editor) override;
     void textEditorFocusLost(juce::TextEditor& editor) override;
+
+    // Snap helper
+    double snapToGrid(double time) const;
 
     Track trackData;
     std::vector<std::unique_ptr<ClipComponent>> clipComponents;
@@ -84,6 +93,10 @@ private:
     double pixelsPerSecond = 50.0;
     double visibleStart = 0.0;
     double visibleEnd = 30.0;
+
+    // Snap settings
+    bool snapEnabled = true;
+    double snapInterval = 0.25;  // 250ms = 1/16 note at 60 BPM
 
     // Track header width
     static constexpr int headerWidth = 120;

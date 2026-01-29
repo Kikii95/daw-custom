@@ -73,6 +73,14 @@ void AudioMixer::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToF
 
         leftPeak.store(juce::jmax(left, currentLeft * 0.95f));
         rightPeak.store(juce::jmax(right, currentRight * 0.95f));
+
+        // Send to visualizer callback
+        if (audioOutputCallback)
+        {
+            audioOutputCallback(buffer->getReadPointer(0, bufferToFill.startSample),
+                                buffer->getReadPointer(1, bufferToFill.startSample),
+                                bufferToFill.numSamples);
+        }
     }
 
     // Advance transport position

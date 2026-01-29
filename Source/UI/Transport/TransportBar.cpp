@@ -39,6 +39,18 @@ TransportBar::TransportBar()
     };
     addAndMakeVisible(stopButton);
 
+    // Loop toggle button
+    loopButton.setButtonText("L");
+    loopButton.setColour(juce::ToggleButton::textColourId, Theme::Colours::text());
+    loopButton.setColour(juce::ToggleButton::tickColourId, Theme::Colours::accent());
+    loopButton.setTooltip("Toggle loop mode (Alt+click ruler to set loop)");
+    loopButton.onClick = [this]()
+    {
+        if (transport != nullptr)
+            transport->setLoopEnabled(loopButton.getToggleState());
+    };
+    addAndMakeVisible(loopButton);
+
     // Position display
     positionLabel.setFont(juce::Font("Monospace", 18.0f, juce::Font::bold));
     positionLabel.setColour(juce::Label::textColourId, Theme::Colours::text());
@@ -85,13 +97,14 @@ void TransportBar::resized()
 {
     auto bounds = getLocalBounds().reduced(8);
 
-    // Transport buttons on the left
-    auto buttonArea = bounds.removeFromLeft(200);
-    auto buttonWidth = buttonArea.getWidth() / 3;
+    // Transport buttons on the left (play, pause, stop, loop)
+    auto buttonArea = bounds.removeFromLeft(250);
+    auto buttonWidth = buttonArea.getWidth() / 4;
 
     playButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
     pauseButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
-    stopButton.setBounds(buttonArea.reduced(2));
+    stopButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
+    loopButton.setBounds(buttonArea.reduced(2));
 
     // Tempo on the right
     auto tempoArea = bounds.removeFromRight(200);
@@ -178,6 +191,14 @@ void TransportBar::transportStateChanged(TransportController::State /*newState*/
 void TransportBar::transportPositionChanged(double /*newPosition*/)
 {
     // Position updates handled by timer for smoother display
+}
+
+void TransportBar::transportLoopChanged(bool enabled, double /*start*/, double /*end*/)
+{
+    juce::MessageManager::callAsync([this, enabled]()
+    {
+        loopButton.setToggleState(enabled, juce::dontSendNotification);
+    });
 }
 
 void TransportBar::timerCallback()

@@ -48,6 +48,7 @@ public:
     // TransportController::Listener
     void transportStateChanged(TransportController::State newState) override;
     void transportPositionChanged(double newPosition) override;
+    void transportLoopChanged(bool enabled, double start, double end) override;
 
     // Timer for playhead updates
     void timerCallback() override;
@@ -63,6 +64,19 @@ public:
     std::function<void(juce::Uuid, juce::Colour)> onTrackColourChanged;
     std::function<void(juce::Uuid, juce::Uuid)> onClipDelete;      // (trackId, clipId)
     std::function<void(juce::Uuid, juce::Uuid)> onClipDuplicate;   // (trackId, clipId)
+    std::function<void(double, double)> onLoopRangeChanged;        // (start, end)
+    std::function<void(double)> onPositionClicked;                 // (time)
+
+    // Selection
+    const std::vector<std::pair<juce::Uuid, juce::Uuid>>& getSelectedClips() const { return selectedClips; }
+    void clearClipSelection();
+    void selectAllClipsOnTrack(juce::Uuid trackId);
+
+    // Snap to grid
+    void setSnapEnabled(bool enabled);
+    bool isSnapEnabled() const { return snapEnabled; }
+    void setSnapInterval(double seconds);
+    double getSnapInterval() const { return snapInterval; }
 
     // Position helpers for drag-drop
     int getTrackIndexAtY(int y) const;
@@ -93,6 +107,13 @@ private:
     static constexpr int trackHeight = 80;
     static constexpr double minZoom = 5.0;
     static constexpr double maxZoom = 500.0;
+
+    // Snap settings
+    bool snapEnabled = true;
+    double snapInterval = 0.25;  // 250ms default
+
+    // Multi-selection: pairs of (trackId, clipId)
+    std::vector<std::pair<juce::Uuid, juce::Uuid>> selectedClips;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TimelinePanel)
 };

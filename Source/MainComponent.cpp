@@ -50,6 +50,13 @@ MainComponent::MainComponent()
     assetBrowser.setFormatManager(&fileLoader.getFormatManager());
     addAndMakeVisible(assetBrowser);
 
+    // Set up oscilloscope with audio callback
+    addAndMakeVisible(oscilloscope);
+    mixer->setAudioOutputCallback([this](const float* left, const float* right, int numSamples)
+    {
+        oscilloscope.pushStereoSamples(left, right, numSamples);
+    });
+
     // Connect callbacks
     connectCallbacks();
 
@@ -102,6 +109,10 @@ void MainComponent::resized()
     // Asset browser on left
     auto assetBrowserWidth = 200;
     assetBrowser.setBounds(bounds.removeFromLeft(assetBrowserWidth));
+
+    // Oscilloscope above mixer
+    auto oscilloscopeHeight = 100;
+    oscilloscope.setBounds(bounds.removeFromBottom(oscilloscopeHeight));
 
     // Mixer at bottom
     auto mixerHeight = 200;
@@ -876,6 +887,20 @@ void MainComponent::connectCallbacks()
         // Import file on double-click
         filesDropped({ file.getFullPathName() }, 0, 0);
     };
+
+    // Timeline loop callbacks
+    timelinePanel.onLoopRangeChanged = [this](double start, double end)
+    {
+        transport.setLoopRange(start, end);
+        transport.setLoopEnabled(true);
+        project->setModified(true);
+        updateTitle();
+    };
+
+    timelinePanel.onPositionClicked = [this](double time)
+    {
+        transport.setPosition(time);
+    };
 }
 
 AudioTrack* MainComponent::getAudioTrackById(const juce::Uuid& id)
@@ -983,6 +1008,34 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* /*ori
         return true;
     }
 
+    // L = Toggle loop mode
+    if (key.getKeyCode() == 'L' && !key.getModifiers().isCtrlDown())
+    {
+        transport.setLoopEnabled(!transport.isLoopEnabled());
+        return true;
+    }
+
+    // G = Toggle snap to grid
+    if (key.getKeyCode() == 'G' && !key.getModifiers().isCtrlDown())
+    {
+        timelinePanel.setSnapEnabled(!timelinePanel.isSnapEnabled());
+        return true;
+    }
+
+    // Ctrl+C = Copy selected clips
+    if (key == juce::KeyPress('c', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        copySelectedClips();
+        return true;
+    }
+
+    // Ctrl+V = Paste clips
+    if (key == juce::KeyPress('v', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        pasteClips();
+        return true;
+    }
+
     // Ctrl+Z = Undo (placeholder)
     if (key == juce::KeyPress('z', juce::ModifierKeys::ctrlModifier, 0))
     {
@@ -1002,4 +1055,107 @@ void MainComponent::updateTitle()
 
     if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
         window->setName(title);
+}
+
+void MainComponent::copySelectedClips()
+{
+    clipboardClips.clear();
+
+    const auto& selectedClips = timelinePanel.getSelectedClips();
+    if (selectedClips.empty())
+        return;
+
+    // Copy clip data from selected clips
+    for (const auto& [trackId, clipId] : selectedClips)
+    {
+        if (auto* track = project->getTrack(trackId))
+        {
+            for (const auto& clip : track->clips)
+            {
+                if (clip.id == clipId)
+                {
+                    clipboardClips.push_back(clip);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void MainComponent::pasteClips()
+{
+    if (clipboardClips.empty())
+        return;
+
+    // Get current playhead position
+    double pasteTime = transport.getPosition();
+
+    // Find earliest clip time in clipboard for offset calculation
+    double earliestTime = std::numeric_limits<double>::max();
+    for (const auto& clip : clipboardClips)
+        earliestTime = juce::jmin(earliestTime, clip.startTime);
+
+    // Get selected track (or first track as fallback)
+    juce::Uuid targetTrackId;
+    auto selectedTrackId = mixerPanel.getSelectedTrackId();
+    if (!selectedTrackId.isNull())
+        targetTrackId = selectedTrackId;
+    else if (project->getNumTracks() > 0)
+        targetTrackId = project->getTrackByIndex(0)->id;
+    else
+        return;
+
+    auto* targetTrack = project->getTrack(targetTrackId);
+    if (targetTrack == nullptr)
+        return;
+
+    // Find target audio track index
+    int targetTrackIdx = -1;
+    for (int i = 0; i < project->getNumTracks(); ++i)
+    {
+        if (auto* t = project->getTrackByIndex(i); t && t->id == targetTrackId)
+        {
+            targetTrackIdx = i;
+            break;
+        }
+    }
+
+    if (targetTrackIdx < 0)
+        return;
+
+    // Paste each clip
+    for (const auto& sourceClip : clipboardClips)
+    {
+        // Create new clip with new ID and adjusted time
+        Clip newClip = sourceClip;
+        newClip.id = juce::Uuid();
+        newClip.startTime = pasteTime + (sourceClip.startTime - earliestTime);
+        newClip.name = sourceClip.name + " (paste)";
+        newClip.colour = targetTrack->colour;
+
+        // Add to project
+        targetTrack->addClip(newClip);
+
+        // Add to audio engine
+        if (auto* audioTrack = mixer->getTrack(targetTrackIdx))
+        {
+            if (newClip.sourceFile.existsAsFile())
+            {
+                auto result = fileLoader.loadFile(newClip.sourceFile);
+                if (result.isValid())
+                {
+                    auto audioClip = std::make_unique<AudioClip>();
+                    audioClip->loadFromBuffer(std::move(result.buffer), result.sampleRate, newClip);
+                    audioTrack->addClip(std::move(audioClip));
+                }
+            }
+        }
+    }
+
+    // Update UI
+    timelinePanel.refreshTracks();
+    transport.setDuration(project->getTotalDuration());
+
+    project->setModified(true);
+    updateTitle();
 }

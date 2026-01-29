@@ -50,6 +50,7 @@ target_sources(DAWCustom
         Source/Audio/DSP/Effects/CompressorEffect.cpp
         Source/Audio/DSP/Effects/ReverbEffect.cpp
         Source/Audio/DSP/Effects/DelayEffect.cpp
+        Source/Audio/DSP/Effects/TremoloEffect.cpp
 
         # Audio DSP - Synthesis
         Source/Audio/DSP/Synthesis/OscillatorEffect.cpp
@@ -71,6 +72,9 @@ target_sources(DAWCustom
         # UI - Waveform
         Source/UI/Waveform/WaveformCache.cpp
         Source/UI/Waveform/WaveformDisplay.cpp
+
+        # UI - Visualizer
+        Source/UI/Visualizer/OscilloscopePanel.cpp
 
         # UI - Timeline
         Source/UI/Timeline/TimelineRuler.cpp

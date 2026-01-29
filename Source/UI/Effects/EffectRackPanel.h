@@ -71,6 +71,7 @@ private:
         Kick = 8,
         Filter = 9,
         Synth = 10,
+        Tremolo = 11,
         // VST3 plugins start at 1000
         VST3Base = 1000
     };

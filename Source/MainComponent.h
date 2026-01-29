@@ -12,6 +12,7 @@
 #include "UI/Mixer/MixerPanel.h"
 #include "UI/Effects/EffectRackPanel.h"
 #include "UI/Assets/AssetBrowser.h"
+#include "UI/Visualizer/OscilloscopePanel.h"
 #include "UI/Theme/ModernLookAndFeel.h"
 #include <memory>
 
@@ -50,6 +51,10 @@ private:
     void exportMix();
     void addTrack();
 
+    // Clipboard operations
+    void copySelectedClips();
+    void pasteClips();
+
     void connectCallbacks();
     void updateTitle();
 
@@ -63,6 +68,9 @@ private:
     // Project
     std::unique_ptr<Project> project;
 
+    // Clipboard for copy/paste (stores clip data)
+    std::vector<Clip> clipboardClips;
+
     // Theme
     ModernLookAndFeel modernLookAndFeel;
 
@@ -73,6 +81,7 @@ private:
     MixerPanel mixerPanel;
     EffectRackPanel effectRackPanel;
     AssetBrowser assetBrowser;
+    OscilloscopePanel oscilloscope;
 
     // Helper to find AudioTrack by ID
     AudioTrack* getAudioTrackById(const juce::Uuid& id);

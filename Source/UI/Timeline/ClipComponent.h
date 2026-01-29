@@ -35,7 +35,7 @@ public:
     // Callback for drag
     std::function<void(ClipComponent*, double)> onDrag;           // Horizontal drag (delta pixels)
     std::function<void(ClipComponent*, int)> onDragToNewTrack;    // Vertical drag (target track index)
-    std::function<void(ClipComponent*)> onSelect;
+    std::function<void(ClipComponent*, bool addToSelection)> onSelect;  // addToSelection = Ctrl+click
 
     // Context menu callbacks
     std::function<void(ClipComponent*)> onDelete;

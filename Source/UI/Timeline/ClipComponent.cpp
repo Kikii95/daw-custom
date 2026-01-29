@@ -133,8 +133,9 @@ void ClipComponent::setSelected(bool sel)
 
 void ClipComponent::mouseDown(const juce::MouseEvent& e)
 {
+    // Notify selection with modifier info for multi-select
     if (onSelect)
-        onSelect(this);
+        onSelect(this, e.mods.isCtrlDown());
 
     // Context menu on right-click
     if (e.mods.isPopupMenu())

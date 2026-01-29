@@ -5,6 +5,7 @@
 #include "TransportController.h"
 #include <vector>
 #include <memory>
+#include <functional>
 
 class AudioMixer : public juce::AudioSource
 {
@@ -48,6 +49,10 @@ public:
     float getRightPeak() const { return rightPeak.load(); }
     void resetPeaks();
 
+    // Audio output callback (for visualizers)
+    using AudioOutputCallback = std::function<void(const float*, const float*, int)>;
+    void setAudioOutputCallback(AudioOutputCallback callback) { audioOutputCallback = std::move(callback); }
+
 private:
     std::vector<std::unique_ptr<AudioTrack>> tracks;
 
@@ -61,6 +66,9 @@ private:
     int currentBlockSize = 0;
 
     juce::CriticalSection trackLock;
+
+    // Callback for visualizers
+    AudioOutputCallback audioOutputCallback;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioMixer)
 };

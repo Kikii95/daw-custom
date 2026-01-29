@@ -112,23 +112,41 @@ void TrackLane::addClipComponent(const Clip& clipData, juce::AudioThumbnail* thu
         clip->setThumbnail(thumbnail);
 
     // Set callbacks
-    clip->onSelect = [this](ClipComponent* c)
+    clip->onSelect = [this](ClipComponent* c, bool addToSelection)
     {
-        if (selectedClip != nullptr)
+        // If not adding to selection, deselect previous
+        if (!addToSelection && selectedClip != nullptr && selectedClip != c)
             selectedClip->setSelected(false);
 
-        selectedClip = c;
-        c->setSelected(true);
+        // If adding to selection and already selected, toggle off
+        if (addToSelection && c->isSelected())
+        {
+            c->setSelected(false);
+            if (selectedClip == c)
+                selectedClip = nullptr;
+        }
+        else
+        {
+            selectedClip = c;
+            c->setSelected(true);
+        }
 
         if (onClipSelected)
-            onClipSelected(this, c);
+            onClipSelected(this, c, addToSelection);
     };
 
     clip->onDrag = [this](ClipComponent* c, double deltaPixels)
     {
         double deltaTime = deltaPixels / pixelsPerSecond;
         Clip data = c->getClipData();
-        data.startTime = juce::jmax(0.0, data.startTime + deltaTime);
+        double newTime = juce::jmax(0.0, data.startTime + deltaTime);
+
+        // Apply snap to grid (Shift held = disable snap)
+        bool shiftHeld = juce::ModifierKeys::getCurrentModifiers().isShiftDown();
+        if (snapEnabled && !shiftHeld)
+            newTime = snapToGrid(newTime);
+
+        data.startTime = newTime;
         c->setClipData(data);
         layoutClips();
     };
@@ -307,4 +325,13 @@ void TrackLane::textEditorFocusLost(juce::TextEditor& editor)
 {
     // Treat focus loss as confirmation
     textEditorReturnKeyPressed(editor);
+}
+
+double TrackLane::snapToGrid(double time) const
+{
+    if (!snapEnabled || snapInterval <= 0.0)
+        return time;
+
+    // Round to nearest grid line
+    return std::round(time / snapInterval) * snapInterval;
 }

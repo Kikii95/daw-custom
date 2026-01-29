@@ -21,6 +21,7 @@ public:
     // TransportController::Listener
     void transportStateChanged(TransportController::State newState) override;
     void transportPositionChanged(double newPosition) override;
+    void transportLoopChanged(bool enabled, double start, double end) override;
 
     // Timer for position updates
     void timerCallback() override;
@@ -36,6 +37,7 @@ private:
     juce::TextButton playButton { "Play" };
     juce::TextButton pauseButton { "Pause" };
     juce::TextButton stopButton { "Stop" };
+    juce::ToggleButton loopButton { "Loop" };
 
     // Position display
     juce::Label positionLabel;

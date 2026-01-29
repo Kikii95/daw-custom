@@ -8,6 +8,19 @@ TimelinePanel::TimelinePanel()
     // Set ruler offset to match track lane header width
     ruler.setHeaderOffset(TrackLane::getHeaderWidth());
 
+    // Wire ruler loop callbacks
+    ruler.onLoopRangeChanged = [this](double start, double end)
+    {
+        if (onLoopRangeChanged)
+            onLoopRangeChanged(start, end);
+    };
+
+    ruler.onPositionClicked = [this](double time)
+    {
+        if (onPositionClicked)
+            onPositionClicked(time);
+    };
+
     viewport.setViewedComponent(&trackContainer, false);
     viewport.setScrollBarsShown(true, false);
     addAndMakeVisible(viewport);
@@ -150,6 +163,15 @@ void TimelinePanel::transportPositionChanged(double /*newPosition*/)
     // Handled by timer
 }
 
+void TimelinePanel::transportLoopChanged(bool enabled, double start, double end)
+{
+    juce::MessageManager::callAsync([this, enabled, start, end]()
+    {
+        ruler.setLoopEnabled(enabled);
+        ruler.setLoopRange(start, end);
+    });
+}
+
 void TimelinePanel::timerCallback()
 {
     if (transport != nullptr)
@@ -180,6 +202,8 @@ void TimelinePanel::refreshTracks()
         lane->setPixelsPerSecond(pixelsPerSecond);
         lane->setFormatManager(formatManager);
         lane->setWaveformCache(&waveformCache);
+        lane->setSnapEnabled(snapEnabled);
+        lane->setSnapInterval(snapInterval);
 
         // Wire track selection
         lane->onTrackSelected = [this](TrackLane* selectedLane)
@@ -252,6 +276,35 @@ void TimelinePanel::refreshTracks()
                 onClipDuplicate(trackLane->getTrackData().id, clipComp->getClipData().id);
         };
 
+        // Wire clip selection for multi-select
+        lane->onClipSelected = [this](TrackLane* trackLane, ClipComponent* clipComp, bool addToSelection)
+        {
+            auto trackId = trackLane->getTrackData().id;
+            auto clipId = clipComp->getClipData().id;
+            auto pair = std::make_pair(trackId, clipId);
+
+            if (addToSelection)
+            {
+                // Toggle selection for this clip
+                auto it = std::find(selectedClips.begin(), selectedClips.end(), pair);
+                if (it != selectedClips.end())
+                {
+                    selectedClips.erase(it);
+                }
+                else
+                {
+                    selectedClips.push_back(pair);
+                }
+            }
+            else
+            {
+                // Clear selection and select only this clip
+                clearClipSelection();
+                selectedClips.push_back(pair);
+                clipComp->setSelected(true);
+            }
+        };
+
         // Add clips
         for (const auto& clip : track.clips)
         {
@@ -318,4 +371,48 @@ void TimelinePanel::clearDropTargets()
 {
     for (auto& lane : trackLanes)
         lane->setDropTarget(false);
+}
+
+void TimelinePanel::clearClipSelection()
+{
+    // Deselect all clips visually
+    for (auto& lane : trackLanes)
+    {
+        // Iterate through the track's clips and deselect them
+        // The TrackLane manages its own clip components internally
+    }
+    selectedClips.clear();
+
+    // Refresh to update visual state
+    for (auto& lane : trackLanes)
+        lane->repaint();
+}
+
+void TimelinePanel::selectAllClipsOnTrack(juce::Uuid trackId)
+{
+    for (auto& lane : trackLanes)
+    {
+        if (lane->getTrackData().id == trackId)
+        {
+            for (const auto& clip : lane->getTrackData().clips)
+            {
+                selectedClips.push_back(std::make_pair(trackId, clip.id));
+            }
+            break;
+        }
+    }
+}
+
+void TimelinePanel::setSnapEnabled(bool enabled)
+{
+    snapEnabled = enabled;
+    for (auto& lane : trackLanes)
+        lane->setSnapEnabled(enabled);
+}
+
+void TimelinePanel::setSnapInterval(double seconds)
+{
+    snapInterval = juce::jmax(0.01, seconds);
+    for (auto& lane : trackLanes)
+        lane->setSnapInterval(snapInterval);
 }
