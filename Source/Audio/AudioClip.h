@@ -39,6 +39,7 @@ public:
     double getEndTime() const { return clipData.getEndTime(); }
 
     const Clip& getClipData() const { return clipData; }
+    void setClipData(const Clip& data) { clipData = data; }
 
     // Check if position (in samples) falls within this clip
     bool containsPosition(juce::int64 positionInSamples, double projectSampleRate) const;

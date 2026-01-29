@@ -16,6 +16,7 @@ public:
     // Track binding
     void setTrackData(const Track& track);
     juce::Uuid getTrackId() const { return trackId; }
+    void setName(const juce::String& newName);
 
     // Update levels for metering
     void setMeterLevels(float left, float right);

@@ -216,6 +216,17 @@ namespace Theme
             return colour(palette[static_cast<size_t>(trackIndex) % palette.size()]);
         }
 
+        inline const char* getName(int trackIndex)
+        {
+            static const char* names[] = {
+                "Pink", "Red", "Orange", "Yellow",
+                "Light Green", "Green", "Cyan", "Blue",
+                "Indigo", "Purple", "Brown", "Blue Grey",
+                "Pink", "Red", "Orange", "Yellow"  // Repeat for indices 12-15
+            };
+            return names[trackIndex % 16];
+        }
+
         inline juce::Colour getWaveformTop(juce::Colour baseColour)
         {
             return baseColour.brighter(0.3f);

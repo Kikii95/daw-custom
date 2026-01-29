@@ -21,9 +21,21 @@ void TrackLane::paint(juce::Graphics& g)
         g.fillRect(getLocalBounds());
     }
 
+    // Drop target highlight (for drag-drop feedback)
+    if (dropTarget)
+    {
+        auto contentArea = getLocalBounds().withTrimmedLeft(headerWidth);
+        g.setColour(Theme::Colours::accent().withAlpha(0.25f));
+        g.fillRect(contentArea);
+
+        // Dashed border effect
+        g.setColour(Theme::Colours::accent());
+        g.drawRect(contentArea.reduced(2), 2);
+    }
+
     // Header area
     auto headerArea = getLocalBounds().removeFromLeft(headerWidth);
-    g.setColour(trackData.colour.withAlpha(selected ? 0.5f : 0.3f));
+    g.setColour(trackData.colour.withAlpha(selected ? 0.5f : (dropTarget ? 0.6f : 0.3f)));
     g.fillRect(headerArea);
 
     // Track name
@@ -53,8 +65,8 @@ void TrackLane::paint(juce::Graphics& g)
         g.drawText("S", indicatorArea.withWidth(20), juce::Justification::centred);
     }
 
-    // Empty clip state
-    if (clipComponents.empty())
+    // Empty clip state (only show if not drop target)
+    if (clipComponents.empty() && !dropTarget)
     {
         auto contentArea = getLocalBounds().withTrimmedLeft(headerWidth);
         g.setColour(Theme::Colours::textDisabled());
@@ -63,7 +75,7 @@ void TrackLane::paint(juce::Graphics& g)
     }
 
     // Border
-    g.setColour(Theme::colour(Theme::border));
+    g.setColour(dropTarget ? Theme::Colours::accent() : Theme::colour(Theme::border));
     g.drawRect(getLocalBounds());
 }
 
@@ -121,6 +133,24 @@ void TrackLane::addClipComponent(const Clip& clipData, juce::AudioThumbnail* thu
         layoutClips();
     };
 
+    clip->onDragToNewTrack = [this](ClipComponent* c, int trackDelta)
+    {
+        if (onClipDraggedToTrack)
+            onClipDraggedToTrack(this, c, trackDelta);
+    };
+
+    clip->onDelete = [this](ClipComponent* c)
+    {
+        if (onClipDelete)
+            onClipDelete(this, c);
+    };
+
+    clip->onDuplicate = [this](ClipComponent* c)
+    {
+        if (onClipDuplicate)
+            onClipDuplicate(this, c);
+    };
+
     addAndMakeVisible(*clip);
     clipComponents.push_back(std::move(clip));
 
@@ -149,11 +179,40 @@ void TrackLane::layoutClips()
     }
 }
 
-void TrackLane::mouseDown(const juce::MouseEvent& /*e*/)
+void TrackLane::mouseDown(const juce::MouseEvent& e)
 {
     // Select this track when clicked anywhere
     if (onTrackSelected)
         onTrackSelected(this);
+
+    // Context menu on right-click in header
+    auto headerArea = getLocalBounds().removeFromLeft(headerWidth);
+    if (e.mods.isPopupMenu() && headerArea.contains(e.getPosition()))
+    {
+        juce::PopupMenu colourMenu;
+        for (int i = 0; i < 16; ++i)
+        {
+            auto colour = Theme::TrackColours::getColour(i);
+            colourMenu.addItem(100 + i, Theme::TrackColours::getName(i));
+        }
+
+        juce::PopupMenu menu;
+        menu.addItem(1, "Rename");
+        menu.addSubMenu("Track Colour", colourMenu);
+        menu.addSeparator();
+        menu.addItem(2, "Delete Track");
+
+        menu.showMenuAsync(juce::PopupMenu::Options(),
+            [this](int result)
+            {
+                if (result == 1)
+                    showNameEditor();
+                else if (result == 2 && onTrackDelete)
+                    onTrackDelete(this);
+                else if (result >= 100 && result < 116 && onTrackColourChanged)
+                    onTrackColourChanged(this, Theme::TrackColours::getColour(result - 100));
+            });
+    }
 }
 
 void TrackLane::mouseDoubleClick(const juce::MouseEvent& e)
@@ -171,6 +230,15 @@ void TrackLane::setSelected(bool shouldBeSelected)
     if (selected != shouldBeSelected)
     {
         selected = shouldBeSelected;
+        repaint();
+    }
+}
+
+void TrackLane::setDropTarget(bool isTarget)
+{
+    if (dropTarget != isTarget)
+    {
+        dropTarget = isTarget;
         repaint();
     }
 }

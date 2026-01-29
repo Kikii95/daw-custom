@@ -31,6 +31,9 @@ public:
     void selectTrack(const juce::Uuid& trackId);
     juce::Uuid getSelectedTrackId() const { return selectedTrackId; }
 
+    // Track name update
+    void updateTrackName(const juce::Uuid& trackId, const juce::String& newName);
+
     // Timer for meter updates
     void timerCallback() override;
 

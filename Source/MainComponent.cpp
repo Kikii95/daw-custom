@@ -121,8 +121,35 @@ bool MainComponent::isInterestedInFileDrag(const juce::StringArray& files)
     return false;
 }
 
-void MainComponent::filesDropped(const juce::StringArray& files, int /*x*/, int /*y*/)
+void MainComponent::fileDragMove(const juce::StringArray& /*files*/, int x, int y)
 {
+    // Convert to timeline coordinates
+    auto localPoint = timelinePanel.getLocalPoint(this, juce::Point<int>(x, y));
+    int trackIndex = timelinePanel.getTrackIndexAtY(localPoint.y);
+
+    // Highlight target track
+    timelinePanel.setDropTargetTrack(trackIndex);
+}
+
+void MainComponent::fileDragExit(const juce::StringArray& /*files*/)
+{
+    // Clear all drop highlights
+    timelinePanel.clearDropTargets();
+}
+
+void MainComponent::filesDropped(const juce::StringArray& files, int x, int y)
+{
+    // Convert window coordinates to timeline panel coordinates
+    auto localPoint = timelinePanel.getLocalPoint(this, juce::Point<int>(x, y));
+
+    // Determine target track from Y position
+    int targetTrackIndex = timelinePanel.getTrackIndexAtY(localPoint.y);
+
+    // Calculate drop time from X position
+    double dropTime = timelinePanel.getTimeAtX(localPoint.x);
+    if (dropTime < 0.0)
+        dropTime = 0.0;
+
     for (const auto& filePath : files)
     {
         juce::File file(filePath);
@@ -139,11 +166,16 @@ void MainComponent::filesDropped(const juce::StringArray& files, int /*x*/, int 
             continue;
         }
 
-        // Add to first track (or selected track)
+        // Ensure we have at least one track
         if (project->getNumTracks() == 0)
             addTrack();
 
-        auto* track = project->getTrackByIndex(0);
+        // Use target track from drop position, or fallback to first track
+        int trackIdx = (targetTrackIndex >= 0 && targetTrackIndex < project->getNumTracks())
+                           ? targetTrackIndex
+                           : 0;
+
+        auto* track = project->getTrackByIndex(trackIdx);
         if (track == nullptr)
             continue;
 
@@ -152,7 +184,7 @@ void MainComponent::filesDropped(const juce::StringArray& files, int /*x*/, int 
         clip.id = juce::Uuid();
         clip.name = file.getFileNameWithoutExtension();
         clip.sourceFile = file;
-        clip.startTime = 0.0;
+        clip.startTime = dropTime;  // Use calculated drop time
         clip.duration = result.lengthInSeconds;
         clip.sourceSampleRate = result.sampleRate;
         clip.colour = track->colour;
@@ -161,13 +193,16 @@ void MainComponent::filesDropped(const juce::StringArray& files, int /*x*/, int 
         track->addClip(clip);
 
         // Create AudioClip with actual audio data and add to mixer's AudioTrack
-        if (auto* audioTrack = mixer->getTrack(0))
+        if (auto* audioTrack = mixer->getTrack(trackIdx))
         {
             auto audioClip = std::make_unique<AudioClip>();
             audioClip->loadFromBuffer(std::move(result.buffer), result.sampleRate, clip);
             audioTrack->addClip(std::move(audioClip));
             audioTrack->setTrackData(*track);
         }
+
+        // Move drop position for next file (stack sequentially)
+        dropTime += result.lengthInSeconds;
 
         // Update duration
         transport.setDuration(project->getTotalDuration());
@@ -179,6 +214,9 @@ void MainComponent::filesDropped(const juce::StringArray& files, int /*x*/, int 
         project->setModified(true);
         updateTitle();
     }
+
+    // Clear drop target highlight
+    timelinePanel.clearDropTargets();
 }
 
 juce::StringArray MainComponent::getMenuBarNames()
@@ -248,7 +286,20 @@ void MainComponent::newProject()
     transport.stop();
     transport.setDuration(0.0);
 
-    addTrack();
+    // Create 8 default tracks with distinct colors
+    constexpr int numDefaultTracks = 8;
+    for (int i = 0; i < numDefaultTracks; ++i)
+    {
+        auto& track = project->addTrack("Track " + juce::String(i + 1));
+        track.colour = Theme::TrackColours::getColour(i);
+
+        auto* audioTrack = mixer->addTrack();
+        if (audioTrack != nullptr)
+            audioTrack->setTrackData(track);
+    }
+
+    timelinePanel.refreshTracks();
+    mixerPanel.refreshChannels();
     updateTitle();
 }
 
@@ -575,6 +626,227 @@ void MainComponent::connectCallbacks()
             effectRackPanel.setTrack(audioTrack);
     };
 
+    // Timeline track rename - sync to project, mixer, and audio engine
+    timelinePanel.onTrackRenamed = [this](juce::Uuid trackId, const juce::String& newName)
+    {
+        // Update project model
+        if (auto* track = project->getTrack(trackId))
+        {
+            track->name = newName;
+            project->setModified(true);
+            updateTitle();
+        }
+
+        // Update mixer panel
+        mixerPanel.updateTrackName(trackId, newName);
+
+        // Update audio engine track
+        if (auto* audioTrack = getAudioTrackById(trackId))
+            audioTrack->setName(newName);
+    };
+
+    // Timeline clip moved between tracks
+    timelinePanel.onClipMoved = [this](juce::Uuid clipId, juce::Uuid fromTrackId, int fromIdx, int toIdx)
+    {
+        // Get tracks
+        auto* fromTrack = project->getTrack(fromTrackId);
+        auto* toTrack = project->getTrackByIndex(toIdx);
+
+        if (fromTrack == nullptr || toTrack == nullptr)
+            return;
+
+        // Find clip in source track
+        Clip clipData;
+        bool found = false;
+        for (const auto& c : fromTrack->clips)
+        {
+            if (c.id == clipId)
+            {
+                clipData = c;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+            return;
+
+        // Update clip color to match new track
+        clipData.colour = toTrack->colour;
+
+        // Remove from source, add to destination (Project model)
+        fromTrack->removeClip(clipId);
+        toTrack->addClip(clipData);
+
+        // Move in audio engine
+        auto* srcAudioTrack = mixer->getTrack(fromIdx);
+        auto* dstAudioTrack = mixer->getTrack(toIdx);
+
+        if (srcAudioTrack != nullptr && dstAudioTrack != nullptr)
+        {
+            auto audioClip = srcAudioTrack->removeClip(clipId);
+            if (audioClip != nullptr)
+            {
+                audioClip->setClipData(clipData);  // Update color
+                dstAudioTrack->addClip(std::move(audioClip));
+            }
+        }
+
+        // Refresh UI
+        timelinePanel.refreshTracks();
+
+        project->setModified(true);
+        updateTitle();
+    };
+
+    // Track delete from context menu
+    timelinePanel.onTrackDelete = [this](juce::Uuid trackId)
+    {
+        // Remove from project and mixer (both use UUID)
+        project->removeTrack(trackId);
+        mixer->removeTrack(trackId);
+
+        // Update UI
+        timelinePanel.refreshTracks();
+        mixerPanel.refreshChannels();
+        effectRackPanel.setTrack(nullptr);
+
+        // Update duration
+        transport.setDuration(project->getTotalDuration());
+
+        project->setModified(true);
+        updateTitle();
+    };
+
+    // Track colour change from context menu
+    timelinePanel.onTrackColourChanged = [this](juce::Uuid trackId, juce::Colour newColour)
+    {
+        if (auto* track = project->getTrack(trackId))
+        {
+            track->colour = newColour;
+
+            // Update all clips on this track
+            for (auto& clip : track->clips)
+                clip.colour = newColour;
+
+            timelinePanel.refreshTracks();
+            project->setModified(true);
+            updateTitle();
+        }
+    };
+
+    // Clip delete from context menu
+    timelinePanel.onClipDelete = [this](juce::Uuid trackId, juce::Uuid clipId)
+    {
+        auto* track = project->getTrack(trackId);
+        if (track == nullptr)
+            return;
+
+        // Remove from project
+        track->removeClip(clipId);
+
+        // Remove from audio engine
+        int trackIdx = -1;
+        for (int i = 0; i < project->getNumTracks(); ++i)
+        {
+            if (auto* t = project->getTrackByIndex(i); t && t->id == trackId)
+            {
+                trackIdx = i;
+                break;
+            }
+        }
+
+        if (trackIdx >= 0)
+        {
+            if (auto* audioTrack = mixer->getTrack(trackIdx))
+                audioTrack->removeClip(clipId);
+        }
+
+        // Update UI
+        timelinePanel.refreshTracks();
+        transport.setDuration(project->getTotalDuration());
+
+        project->setModified(true);
+        updateTitle();
+    };
+
+    // Clip duplicate from context menu
+    timelinePanel.onClipDuplicate = [this](juce::Uuid trackId, juce::Uuid clipId)
+    {
+        auto* track = project->getTrack(trackId);
+        if (track == nullptr)
+            return;
+
+        // Find original clip
+        const Clip* originalClip = nullptr;
+        for (const auto& c : track->clips)
+        {
+            if (c.id == clipId)
+            {
+                originalClip = &c;
+                break;
+            }
+        }
+
+        if (originalClip == nullptr)
+            return;
+
+        // Create duplicate
+        Clip newClip = *originalClip;
+        newClip.id = juce::Uuid();
+        newClip.name = originalClip->name + " (copy)";
+        newClip.startTime = originalClip->getEndTime();  // Place after original
+
+        track->addClip(newClip);
+
+        // Duplicate in audio engine
+        int trackIdx = -1;
+        for (int i = 0; i < project->getNumTracks(); ++i)
+        {
+            if (auto* t = project->getTrackByIndex(i); t && t->id == trackId)
+            {
+                trackIdx = i;
+                break;
+            }
+        }
+
+        if (trackIdx >= 0)
+        {
+            if (auto* audioTrack = mixer->getTrack(trackIdx))
+            {
+                // Find original audio clip and duplicate it
+                for (int i = 0; i < audioTrack->getNumClips(); ++i)
+                {
+                    if (auto* ac = audioTrack->getClip(i))
+                    {
+                        if (ac->getClipData().id == clipId)
+                        {
+                            // Reload audio for duplicate
+                            if (newClip.sourceFile.existsAsFile())
+                            {
+                                auto result = fileLoader.loadFile(newClip.sourceFile);
+                                if (result.isValid())
+                                {
+                                    auto newAudioClip = std::make_unique<AudioClip>();
+                                    newAudioClip->loadFromBuffer(std::move(result.buffer), result.sampleRate, newClip);
+                                    audioTrack->addClip(std::move(newAudioClip));
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update UI
+        timelinePanel.refreshTracks();
+        transport.setDuration(project->getTotalDuration());
+
+        project->setModified(true);
+        updateTitle();
+    };
+
     // Effect rack callbacks
     effectRackPanel.onEffectAdded = [this](juce::Uuid /*trackId*/, int /*index*/)
     {
@@ -640,6 +912,82 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* /*ori
     {
         transport.setPosition(0.0);
         return true;
+    }
+
+    // Ctrl+S = Save
+    if (key == juce::KeyPress('s', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        saveProject();
+        return true;
+    }
+
+    // Ctrl+O = Open
+    if (key == juce::KeyPress('o', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        openProject();
+        return true;
+    }
+
+    // Ctrl+N = New
+    if (key == juce::KeyPress('n', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        newProject();
+        return true;
+    }
+
+    // Ctrl+T = Add Track
+    if (key == juce::KeyPress('t', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        addTrack();
+        return true;
+    }
+
+    // Delete or Backspace = Delete selected clip
+    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+    {
+        // TODO: Implement clip deletion when clip selection is available
+        return false;
+    }
+
+    // M = Mute selected track
+    if (key.getKeyCode() == 'M' && !key.getModifiers().isCtrlDown())
+    {
+        auto selectedTrackId = mixerPanel.getSelectedTrackId();
+        if (!selectedTrackId.isNull())
+        {
+            if (auto* track = project->getTrack(selectedTrackId))
+            {
+                track->muted = !track->muted;
+                if (auto* audioTrack = getAudioTrackById(selectedTrackId))
+                    audioTrack->setMuted(track->muted);
+                mixerPanel.refreshChannels();
+            }
+        }
+        return true;
+    }
+
+    // S = Solo selected track (only when not Ctrl+S)
+    if (key.getKeyCode() == 'S' && !key.getModifiers().isCtrlDown())
+    {
+        auto selectedTrackId = mixerPanel.getSelectedTrackId();
+        if (!selectedTrackId.isNull())
+        {
+            if (auto* track = project->getTrack(selectedTrackId))
+            {
+                track->solo = !track->solo;
+                if (auto* audioTrack = getAudioTrackById(selectedTrackId))
+                    audioTrack->setSolo(track->solo);
+                mixerPanel.refreshChannels();
+            }
+        }
+        return true;
+    }
+
+    // Ctrl+Z = Undo (placeholder)
+    if (key == juce::KeyPress('z', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        // TODO: Implement undo
+        return false;
     }
 
     return false;

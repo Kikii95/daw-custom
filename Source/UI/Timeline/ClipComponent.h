@@ -33,8 +33,13 @@ public:
     void mouseExit(const juce::MouseEvent& e) override;
 
     // Callback for drag
-    std::function<void(ClipComponent*, double)> onDrag;
+    std::function<void(ClipComponent*, double)> onDrag;           // Horizontal drag (delta pixels)
+    std::function<void(ClipComponent*, int)> onDragToNewTrack;    // Vertical drag (target track index)
     std::function<void(ClipComponent*)> onSelect;
+
+    // Context menu callbacks
+    std::function<void(ClipComponent*)> onDelete;
+    std::function<void(ClipComponent*)> onDuplicate;
 
 private:
     Clip clipData;
@@ -42,8 +47,11 @@ private:
     bool selected = false;
     bool hovered = false;
     bool dragging = false;
+    bool verticalDragActive = false;
 
     juce::Point<int> dragStart;
+    juce::Point<int> dragStartScreen;  // For vertical drag detection
+    int initialTrackY = 0;              // Y center of original track
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipComponent)
 };

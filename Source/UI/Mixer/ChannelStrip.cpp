@@ -174,6 +174,13 @@ void ChannelStrip::setTrackData(const Track& track)
     repaint();
 }
 
+void ChannelStrip::setName(const juce::String& newName)
+{
+    trackName = newName;
+    nameLabel.setText(trackName, juce::dontSendNotification);
+    repaint();
+}
+
 void ChannelStrip::setMeterLevels(float left, float right)
 {
     meter.setLevels(left, right);

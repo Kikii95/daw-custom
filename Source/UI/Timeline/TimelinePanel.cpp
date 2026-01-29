@@ -193,6 +193,65 @@ void TimelinePanel::refreshTracks()
                 onTrackSelected(selectedLane->getTrackData().id);
         };
 
+        // Wire track rename
+        lane->onTrackRenamed = [this](TrackLane* renamedLane, const juce::String& newName)
+        {
+            if (onTrackRenamed)
+                onTrackRenamed(renamedLane->getTrackData().id, newName);
+        };
+
+        // Wire clip inter-track dragging
+        lane->onClipDraggedToTrack = [this](TrackLane* fromLane, ClipComponent* clipComp, int trackDelta)
+        {
+            // Find index of source track
+            int fromIdx = -1;
+            for (int i = 0; i < static_cast<int>(trackLanes.size()); ++i)
+            {
+                if (trackLanes[static_cast<size_t>(i)].get() == fromLane)
+                {
+                    fromIdx = i;
+                    break;
+                }
+            }
+
+            if (fromIdx < 0)
+                return;
+
+            int toIdx = fromIdx + trackDelta;
+            if (toIdx < 0 || toIdx >= static_cast<int>(trackLanes.size()) || toIdx == fromIdx)
+                return;
+
+            // Notify parent to move the clip
+            if (onClipMoved)
+                onClipMoved(clipComp->getClipData().id, fromLane->getTrackData().id, fromIdx, toIdx);
+        };
+
+        // Wire track context menu actions
+        lane->onTrackDelete = [this](TrackLane* trackLane)
+        {
+            if (onTrackDelete)
+                onTrackDelete(trackLane->getTrackData().id);
+        };
+
+        lane->onTrackColourChanged = [this](TrackLane* trackLane, juce::Colour newColour)
+        {
+            if (onTrackColourChanged)
+                onTrackColourChanged(trackLane->getTrackData().id, newColour);
+        };
+
+        // Wire clip context menu actions
+        lane->onClipDelete = [this](TrackLane* trackLane, ClipComponent* clipComp)
+        {
+            if (onClipDelete)
+                onClipDelete(trackLane->getTrackData().id, clipComp->getClipData().id);
+        };
+
+        lane->onClipDuplicate = [this](TrackLane* trackLane, ClipComponent* clipComp)
+        {
+            if (onClipDuplicate)
+                onClipDuplicate(trackLane->getTrackData().id, clipComp->getClipData().id);
+        };
+
         // Add clips
         for (const auto& clip : track.clips)
         {
@@ -220,4 +279,43 @@ void TimelinePanel::updateVisibleRange()
 
     for (auto& lane : trackLanes)
         lane->setVisibleRange(scrollPosition, endTime);
+}
+
+int TimelinePanel::getTrackIndexAtY(int y) const
+{
+    // Account for ruler height and viewport scroll position
+    int relativeY = y - rulerHeight + viewport.getViewPositionY();
+
+    if (relativeY < 0)
+        return -1;
+
+    int index = relativeY / trackHeight;
+
+    if (index >= 0 && index < static_cast<int>(trackLanes.size()))
+        return index;
+
+    return -1;
+}
+
+double TimelinePanel::getTimeAtX(int x) const
+{
+    // Account for track header width
+    int contentX = x - TrackLane::getHeaderWidth();
+
+    if (contentX < 0)
+        return scrollPosition;
+
+    return scrollPosition + static_cast<double>(contentX) / pixelsPerSecond;
+}
+
+void TimelinePanel::setDropTargetTrack(int trackIndex)
+{
+    for (int i = 0; i < static_cast<int>(trackLanes.size()); ++i)
+        trackLanes[static_cast<size_t>(i)]->setDropTarget(i == trackIndex);
+}
+
+void TimelinePanel::clearDropTargets()
+{
+    for (auto& lane : trackLanes)
+        lane->setDropTarget(false);
 }

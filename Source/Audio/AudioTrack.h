@@ -20,7 +20,7 @@ public:
 
     // Clip management
     void addClip(std::unique_ptr<AudioClip> clip);
-    void removeClip(const juce::Uuid& clipId);
+    std::unique_ptr<AudioClip> removeClip(const juce::Uuid& clipId);  // Returns the removed clip
     void clearClips();
 
     int getNumClips() const { return static_cast<int>(clips.size()); }
@@ -47,6 +47,7 @@ public:
     void setTrackData(const Track& data) { trackData = data; }
     const Track& getTrackData() const { return trackData; }
     const juce::Uuid& getId() const { return trackData.id; }
+    void setName(const juce::String& newName) { trackData.name = newName; }
 
     // Effect chain access
     EffectChain& getEffectChain() { return effectChain; }

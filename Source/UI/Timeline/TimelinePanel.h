@@ -57,6 +57,20 @@ public:
 
     // Callbacks
     std::function<void(juce::Uuid)> onTrackSelected;
+    std::function<void(juce::Uuid, const juce::String&)> onTrackRenamed;
+    std::function<void(juce::Uuid, juce::Uuid, int, int)> onClipMoved;  // (clipId, fromTrackId, fromTrackIdx, toTrackIdx)
+    std::function<void(juce::Uuid)> onTrackDelete;
+    std::function<void(juce::Uuid, juce::Colour)> onTrackColourChanged;
+    std::function<void(juce::Uuid, juce::Uuid)> onClipDelete;      // (trackId, clipId)
+    std::function<void(juce::Uuid, juce::Uuid)> onClipDuplicate;   // (trackId, clipId)
+
+    // Position helpers for drag-drop
+    int getTrackIndexAtY(int y) const;
+    double getTimeAtX(int x) const;
+
+    // Drop target management
+    void setDropTargetTrack(int trackIndex);
+    void clearDropTargets();
 
 private:
     void updateVisibleRange();

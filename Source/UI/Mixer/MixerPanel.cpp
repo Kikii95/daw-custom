@@ -58,7 +58,7 @@ void MixerPanel::paint(juce::Graphics& g)
         g.setColour(Theme::Colours::textMuted());
         g.setFont(14.0f);
         auto textArea = getLocalBounds().withTrimmedRight(masterWidth);
-        g.drawText("No tracks yet \xe2\x80\x94 Import audio to get started",
+        g.drawText("No tracks yet - Import audio to get started",
                    textArea, juce::Justification::centred);
     }
 }
@@ -179,4 +179,16 @@ void MixerPanel::selectTrack(const juce::Uuid& trackId)
     // Notify callback
     if (onTrackSelected)
         onTrackSelected(trackId);
+}
+
+void MixerPanel::updateTrackName(const juce::Uuid& trackId, const juce::String& newName)
+{
+    for (auto& strip : channelStrips)
+    {
+        if (strip->getTrackId() == trackId)
+        {
+            strip->setName(newName);
+            break;
+        }
+    }
 }

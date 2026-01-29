@@ -192,10 +192,18 @@ void TransportBar::updateButtonStates()
 
     bool playing = transport->isPlaying();
     bool paused = transport->isPaused();
+    bool stopped = transport->isStopped();
+    double position = transport->getPosition();
 
+    // Play: enabled when not playing (can restart from stopped or resume from paused)
     playButton.setEnabled(!playing);
+
+    // Pause: enabled only when playing
     pauseButton.setEnabled(playing);
-    stopButton.setEnabled(playing || paused);
+
+    // Stop: always enabled if there's something to reset (position > 0 or not stopped)
+    // This allows explicit reset even after playback ends naturally
+    stopButton.setEnabled(playing || paused || position > 0.0);
 }
 
 void TransportBar::updatePositionDisplay()

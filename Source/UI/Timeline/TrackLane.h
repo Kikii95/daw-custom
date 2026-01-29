@@ -43,10 +43,19 @@ public:
     bool isSelected() const { return selected; }
     void setSelected(bool shouldBeSelected);
 
+    // Drop target state (for drag-drop visual feedback)
+    void setDropTarget(bool isTarget);
+    bool isDropTarget() const { return dropTarget; }
+
     // Callbacks
     std::function<void(TrackLane*, ClipComponent*)> onClipSelected;
     std::function<void(TrackLane*, const juce::String&)> onTrackRenamed;
     std::function<void(TrackLane*)> onTrackSelected;
+    std::function<void(TrackLane*, ClipComponent*, int)> onClipDraggedToTrack;  // trackDelta: -1 = up, +1 = down
+    std::function<void(TrackLane*)> onTrackDelete;
+    std::function<void(TrackLane*, juce::Colour)> onTrackColourChanged;
+    std::function<void(TrackLane*, ClipComponent*)> onClipDelete;
+    std::function<void(TrackLane*, ClipComponent*)> onClipDuplicate;
 
     // Waveform cache access
     void setWaveformCache(WaveformCache* cache) { waveformCache = cache; }
@@ -67,6 +76,7 @@ private:
     std::vector<std::unique_ptr<ClipComponent>> clipComponents;
     ClipComponent* selectedClip = nullptr;
     bool selected = false;
+    bool dropTarget = false;
 
     WaveformCache* waveformCache = nullptr;
     juce::AudioFormatManager* formatManager = nullptr;

@@ -126,17 +126,21 @@ void AudioTrack::addClip(std::unique_ptr<AudioClip> clip)
     clips.push_back(std::move(clip));
 }
 
-void AudioTrack::removeClip(const juce::Uuid& clipId)
+std::unique_ptr<AudioClip> AudioTrack::removeClip(const juce::Uuid& clipId)
 {
     juce::ScopedLock sl(clipLock);
 
-    clips.erase(
-        std::remove_if(clips.begin(), clips.end(),
-            [&clipId](const std::unique_ptr<AudioClip>& clip)
-            {
-                return clip->getClipData().id == clipId;
-            }),
-        clips.end());
+    for (auto it = clips.begin(); it != clips.end(); ++it)
+    {
+        if ((*it)->getClipData().id == clipId)
+        {
+            auto removedClip = std::move(*it);
+            clips.erase(it);
+            return removedClip;
+        }
+    }
+
+    return nullptr;
 }
 
 void AudioTrack::clearClips()

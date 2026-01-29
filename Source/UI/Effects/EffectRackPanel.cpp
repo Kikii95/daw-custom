@@ -80,7 +80,7 @@ void EffectRackPanel::paint(juce::Graphics& g)
         g.setColour(Theme::Colours::textMuted());
         g.setFont(13.0f);
         auto textArea = getLocalBounds().withTrimmedTop(headerHeight + 20);
-        g.drawText("No effects \xe2\x80\x94 Select from dropdown above",
+        g.drawText("No effects - Select from dropdown above",
                    textArea, juce::Justification::centredTop);
     }
 }

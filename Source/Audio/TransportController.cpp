@@ -8,6 +8,19 @@ void TransportController::play()
 {
     if (state.load() != State::Playing)
     {
+        // If we were stopped (e.g., after reaching the end), reset to beginning
+        if (state.load() == State::Stopped)
+        {
+            double dur = duration.load();
+            double pos = position.load();
+            // Reset position if we're at or past the end
+            if (dur > 0.0 && pos >= dur)
+            {
+                position.store(0.0);
+                notifyPositionChanged();
+            }
+        }
+
         state.store(State::Playing);
         notifyStateChanged();
     }

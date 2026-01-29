@@ -92,16 +92,57 @@ void ModernLookAndFeel::drawButtonText(juce::Graphics& g,
                                         bool /*shouldDrawButtonAsHighlighted*/,
                                         bool /*shouldDrawButtonAsDown*/)
 {
-    auto font = juce::Font(13.0f, juce::Font::bold);
-    g.setFont(font);
-
     auto textColour = button.getToggleState()
         ? button.findColour(juce::TextButton::textColourOnId)
         : button.findColour(juce::TextButton::textColourOffId);
 
     g.setColour(textColour);
-    g.drawText(button.getButtonText(), button.getLocalBounds(),
-               juce::Justification::centred, true);
+
+    auto bounds = button.getLocalBounds().toFloat();
+    auto text = button.getButtonText();
+
+    // Check for transport button icons and draw as paths for reliability
+    if (text == juce::CharPointer_UTF8("\xe2\x96\xb6"))  // Play ▶
+    {
+        auto iconSize = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.4f;
+        auto centre = bounds.getCentre();
+
+        juce::Path playIcon;
+        playIcon.addTriangle(
+            centre.x - iconSize * 0.4f, centre.y - iconSize * 0.5f,
+            centre.x - iconSize * 0.4f, centre.y + iconSize * 0.5f,
+            centre.x + iconSize * 0.5f, centre.y
+        );
+        g.fillPath(playIcon);
+    }
+    else if (text == juce::CharPointer_UTF8("\xe2\x8f\xb8"))  // Pause ⏸
+    {
+        auto iconSize = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.35f;
+        auto centre = bounds.getCentre();
+        auto barWidth = iconSize * 0.3f;
+        auto barHeight = iconSize;
+        auto gap = iconSize * 0.25f;
+
+        g.fillRoundedRectangle(centre.x - gap - barWidth, centre.y - barHeight * 0.5f,
+                                barWidth, barHeight, 2.0f);
+        g.fillRoundedRectangle(centre.x + gap, centre.y - barHeight * 0.5f,
+                                barWidth, barHeight, 2.0f);
+    }
+    else if (text == juce::CharPointer_UTF8("\xe2\x8f\xb9"))  // Stop ⏹
+    {
+        auto iconSize = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.35f;
+        auto centre = bounds.getCentre();
+
+        g.fillRoundedRectangle(centre.x - iconSize * 0.5f, centre.y - iconSize * 0.5f,
+                                iconSize, iconSize, 2.0f);
+    }
+    else
+    {
+        // Default text rendering for regular buttons
+        auto font = juce::Font(13.0f, juce::Font::bold);
+        g.setFont(font);
+        g.drawText(text, button.getLocalBounds(), juce::Justification::centred, true);
+    }
 }
 
 //=============================================================================

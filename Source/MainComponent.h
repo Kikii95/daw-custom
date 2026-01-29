@@ -29,6 +29,8 @@ public:
 
     // Drag & drop
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
+    void fileDragMove(const juce::StringArray& files, int x, int y) override;
+    void fileDragExit(const juce::StringArray& files) override;
     void filesDropped(const juce::StringArray& files, int x, int y) override;
 
     // Menu bar

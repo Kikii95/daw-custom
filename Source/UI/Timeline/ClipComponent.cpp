@@ -136,8 +136,34 @@ void ClipComponent::mouseDown(const juce::MouseEvent& e)
     if (onSelect)
         onSelect(this);
 
+    // Context menu on right-click
+    if (e.mods.isPopupMenu())
+    {
+        juce::PopupMenu menu;
+        menu.addItem(1, "Delete");
+        menu.addItem(2, "Duplicate");
+        menu.addSeparator();
+        menu.addItem(3, clipData.name, false);  // Show name (disabled)
+
+        menu.showMenuAsync(juce::PopupMenu::Options(),
+            [this](int result)
+            {
+                if (result == 1 && onDelete)
+                    onDelete(this);
+                else if (result == 2 && onDuplicate)
+                    onDuplicate(this);
+            });
+        return;
+    }
+
     dragStart = e.getPosition();
+    dragStartScreen = e.getScreenPosition();
+    verticalDragActive = false;
     dragging = true;
+
+    // Store Y center of parent track for vertical offset calculation
+    if (auto* parent = getParentComponent())
+        initialTrackY = parent->getScreenY() + parent->getHeight() / 2;
 }
 
 void ClipComponent::mouseDrag(const juce::MouseEvent& e)
@@ -146,7 +172,25 @@ void ClipComponent::mouseDrag(const juce::MouseEvent& e)
         return;
 
     int deltaX = e.getPosition().x - dragStart.x;
+    int screenY = e.getScreenPosition().y;
 
+    // Detect vertical drag (crossing into another track)
+    constexpr int trackHeight = 80;  // Must match TimelinePanel::trackHeight
+    constexpr int verticalThreshold = trackHeight / 2;
+
+    int verticalOffset = screenY - initialTrackY;
+    int trackDelta = (verticalOffset + (verticalOffset > 0 ? verticalThreshold : -verticalThreshold)) / trackHeight;
+
+    if (trackDelta != 0 && onDragToNewTrack)
+    {
+        // Report track change
+        onDragToNewTrack(this, trackDelta);
+        // Update reference point for next delta
+        initialTrackY += trackDelta * trackHeight;
+        verticalDragActive = true;
+    }
+
+    // Horizontal drag
     if (onDrag && std::abs(deltaX) > 2)
     {
         onDrag(this, static_cast<double>(deltaX));
