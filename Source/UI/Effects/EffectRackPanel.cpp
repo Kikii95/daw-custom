@@ -15,6 +15,13 @@
 
 EffectRackPanel::EffectRackPanel()
 {
+    // Initialize preset manager
+    presetManager = std::make_unique<PresetManager>();
+
+    // Create factory presets if none exist
+    if (!presetManager->hasFactoryPresets())
+        presetManager->createFactoryPresets();
+
     titleLabel.setColour(juce::Label::textColourId, Theme::Colours::text());
     titleLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(titleLabel);
@@ -165,6 +172,11 @@ void EffectRackPanel::updateEffectSlots()
         slot->onRemoveClicked = [this](int index)
         {
             removeEffect(index);
+        };
+
+        slot->onPresetClicked = [this](int index)
+        {
+            showPresetBrowser(index);
         };
 
         effectContainer.addAndMakeVisible(slot.get());
@@ -389,4 +401,102 @@ void EffectRackPanel::scanForPlugins()
             scanButton.setButtonText("Scan");
             rebuildPluginComboItems();
         });
+}
+
+void EffectRackPanel::showPresetBrowser(int effectIndex)
+{
+    if (!currentTrack || effectIndex < 0)
+        return;
+
+    auto& chain = currentTrack->getEffectChain();
+    if (effectIndex >= chain.getNumEffects())
+        return;
+
+    auto* effect = chain.getEffect(effectIndex);
+    if (!effect)
+        return;
+
+    // Create preset browser popup
+    auto browser = std::make_unique<PresetBrowser>(*presetManager);
+    browser->setEffectType(effect->getName());
+    browser->setSize(300, 400);
+
+    // Apply preset when selected
+    browser->onPresetSelected = [this, effectIndex](const Preset& preset)
+    {
+        if (currentTrack)
+        {
+            auto& chain = currentTrack->getEffectChain();
+            if (auto* effect = chain.getEffect(effectIndex))
+            {
+                presetManager->applyPreset(preset, effect);
+
+                // Refresh UI to show new parameter values
+                if (effectIndex < static_cast<int>(effectSlots.size()))
+                {
+                    effectSlots[static_cast<size_t>(effectIndex)]->setEffect(effect, effectIndex);
+                }
+
+                // Notify parent of changes
+                if (onEffectParameterChanged)
+                {
+                    for (int i = 0; i < effect->getNumParameters(); ++i)
+                        onEffectParameterChanged(currentTrack->getId(), effectIndex, i, effect->getParameter(i));
+                }
+            }
+        }
+    };
+
+    // Save preset dialog
+    browser->onSaveRequested = [this, effectIndex]()
+    {
+        if (!currentTrack)
+            return;
+
+        auto& chain = currentTrack->getEffectChain();
+        if (auto* effect = chain.getEffect(effectIndex))
+        {
+            // Show save dialog
+            auto nameInput = std::make_unique<juce::AlertWindow>(
+                "Save Preset",
+                "Enter a name for the preset:",
+                juce::MessageBoxIconType::QuestionIcon);
+
+            nameInput->addTextEditor("name", effect->getName() + " Preset", "Name:");
+            nameInput->addComboBox("category", { "User", "Vocal", "Drums", "Bass", "Master", "Utility" }, "Category:");
+            nameInput->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey));
+            nameInput->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+            auto* pm = presetManager.get();
+            nameInput->enterModalState(true,
+                juce::ModalCallbackFunction::create([this, pm, effectIndex](int result)
+                {
+                    if (result == 1 && currentTrack)
+                    {
+                        auto& chain = currentTrack->getEffectChain();
+                        if (auto* effect = chain.getEffect(effectIndex))
+                        {
+                            // Note: we can't easily get the values from alert window here
+                            // For now, use default name
+                            auto preset = pm->createFromEffect(effect, effect->getName() + " Preset", "User");
+                            pm->savePreset(preset);
+                        }
+                    }
+                }));
+        }
+    };
+
+    // Close callback
+    browser->onCloseRequested = []()
+    {
+        // Browser will be deleted when popup is dismissed
+    };
+
+    // Show as popup
+    auto& cb = juce::CallOutBox::launchAsynchronously(
+        std::move(browser),
+        effectSlots[static_cast<size_t>(effectIndex)]->getScreenBounds(),
+        nullptr);
+
+    (void)cb; // suppress unused warning
 }

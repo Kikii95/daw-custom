@@ -56,6 +56,17 @@ EffectSlotComponent::EffectSlotComponent()
             onRemoveClicked(effectIndex);
     };
     addAndMakeVisible(removeButton);
+
+    // Preset button
+    presetButton.setColour(juce::TextButton::buttonColourId, Theme::colour(Theme::bgHover));
+    presetButton.setColour(juce::TextButton::textColourOffId, Theme::Colours::text());
+    presetButton.setTooltip("Browse presets");
+    presetButton.onClick = [this]()
+    {
+        if (onPresetClicked)
+            onPresetClicked(effectIndex);
+    };
+    addAndMakeVisible(presetButton);
 }
 
 EffectSlotComponent::~EffectSlotComponent()
@@ -131,6 +142,8 @@ void EffectSlotComponent::resized()
     }
 
     bypassButton.setBounds(header.removeFromRight(40));
+    header.removeFromRight(4);
+    presetButton.setBounds(header.removeFromRight(24));
     header.removeFromRight(8);
     nameLabel.setBounds(header);
 

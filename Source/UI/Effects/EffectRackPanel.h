@@ -4,6 +4,8 @@
 #include "EffectSlotComponent.h"
 #include "Audio/AudioTrack.h"
 #include "Audio/Plugins/PluginManager.h"
+#include "Presets/PresetManager.h"
+#include "UI/Presets/PresetBrowser.h"
 #include <vector>
 #include <memory>
 #include <functional>
@@ -75,6 +77,10 @@ private:
 
     // Cache of plugin descriptions (for combo items)
     juce::Array<juce::PluginDescription> pluginDescriptions;
+
+    // Preset system
+    std::unique_ptr<PresetManager> presetManager;
+    void showPresetBrowser(int effectIndex);
 
     // Styling constants
     static constexpr int headerHeight = 36;

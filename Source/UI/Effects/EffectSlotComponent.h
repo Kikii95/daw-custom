@@ -30,6 +30,7 @@ public:
     std::function<void(int, int, float)> onParameterChanged;
     std::function<void(int)> onRemoveClicked;
     std::function<void(int)> onEditClicked;  // For VST3 plugin UI
+    std::function<void(int)> onPresetClicked;  // Open preset browser
 
     // Height calculation for layout
     int getPreferredHeight() const;
@@ -44,6 +45,7 @@ private:
     // Header controls
     juce::Label nameLabel;
     juce::TextButton bypassButton { "BYP" };
+    juce::TextButton presetButton { "P" };  // Open preset browser
     juce::TextButton editButton { "Edit" };  // Shows only for VST3 plugins
     juce::TextButton removeButton { "X" };
 
