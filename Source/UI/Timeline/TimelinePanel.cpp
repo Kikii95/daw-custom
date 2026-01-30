@@ -128,6 +128,7 @@ void TimelinePanel::resized()
 void TimelinePanel::setProject(Project* proj)
 {
     project = proj;
+    ruler.setProject(proj);
     refreshTracks();
 }
 
@@ -176,6 +177,81 @@ void TimelinePanel::zoomOut()
 {
     targetPixelsPerSecond = juce::jlimit(minZoom, maxZoom, targetPixelsPerSecond / 1.5);
     isZoomAnimating = true;
+}
+
+void TimelinePanel::zoomToSelection()
+{
+    if (selectedClips.empty() || project == nullptr)
+        return;
+
+    double minTime = std::numeric_limits<double>::max();
+    double maxTime = 0.0;
+
+    // Find time bounds of selected clips
+    for (const auto& [trackId, clipId] : selectedClips)
+    {
+        if (auto* track = project->getTrack(trackId))
+        {
+            if (auto* clip = track->getClip(clipId))
+            {
+                minTime = juce::jmin(minTime, clip->startTime);
+                maxTime = juce::jmax(maxTime, clip->getEndTime());
+            }
+        }
+    }
+
+    if (minTime >= maxTime)
+        return;
+
+    // Add 10% padding on each side
+    double duration = maxTime - minTime;
+    double padding = duration * 0.1;
+    zoomToTimeRange(minTime - padding, maxTime + padding);
+}
+
+void TimelinePanel::zoomToFitAll()
+{
+    if (project == nullptr)
+        return;
+
+    double maxEndTime = 0.0;
+
+    // Find the latest clip end time across all tracks
+    for (const auto& track : project->getTracks())
+    {
+        for (const auto& clip : track.clips)
+            maxEndTime = juce::jmax(maxEndTime, clip.getEndTime());
+    }
+
+    // Minimum view of 10 seconds if empty or very short
+    maxEndTime = juce::jmax(maxEndTime, 10.0);
+
+    // Add 5% padding at the end
+    zoomToTimeRange(0.0, maxEndTime * 1.05);
+}
+
+void TimelinePanel::zoomToTimeRange(double startTime, double endTime)
+{
+    if (endTime <= startTime)
+        return;
+
+    double duration = endTime - startTime;
+
+    // Calculate available width (excluding header/ruler margins)
+    const int trackHeaderWidth = 120;  // Approximate header width
+    const int availableWidth = getWidth() - trackHeaderWidth;
+
+    if (availableWidth <= 0)
+        return;
+
+    // Calculate pixels per second to fit the range
+    double newPps = static_cast<double>(availableWidth) / duration;
+    targetPixelsPerSecond = juce::jlimit(minZoom, maxZoom, newPps);
+    isZoomAnimating = true;
+
+    // Set scroll position to start of range
+    scrollPosition = juce::jmax(0.0, startTime);
+    updateVisibleRange();
 }
 
 void TimelinePanel::setScrollPosition(double timeInSeconds)
@@ -269,10 +345,13 @@ void TimelinePanel::refreshTracks()
     if (project == nullptr)
         return;
 
-    for (const auto& track : project->getTracks())
+    const auto& tracks = project->getTracks();
+    for (size_t i = 0; i < tracks.size(); ++i)
     {
+        const auto& track = tracks[i];
         auto lane = std::make_unique<TrackLane>();
         lane->setTrackData(track);
+        lane->setTrackIndex(static_cast<int>(i));  // Set track index for drag-drop
         lane->setPixelsPerSecond(pixelsPerSecond);
         lane->setFormatManager(formatManager);
         lane->setWaveformCache(&waveformCache);
@@ -298,42 +377,48 @@ void TimelinePanel::refreshTracks()
                 onTrackRenamed(renamedLane->getTrackData().id, newName);
         };
 
-        // Wire clip inter-track dragging
-        lane->onClipDraggedToTrack = [this](TrackLane* fromLane, ClipComponent* clipComp, int trackDelta)
+        // Wire clip inter-track dragging - now uses absolute target track index
+        lane->onClipDraggedToTrack = [this](TrackLane* fromLane, ClipComponent* clipComp, int targetTrackIndex)
         {
             auto trackId = fromLane->getTrackData().id;
             auto clipId = clipComp->getClipData().id;
+            int fromIdx = fromLane->getTrackIndex();
+
+            // Validate target
+            if (targetTrackIndex < 0 || targetTrackIndex >= static_cast<int>(trackLanes.size()))
+                return;
+            if (targetTrackIndex == fromIdx)
+                return;
 
             // Check if this clip is part of a multi-selection
             if (selectedClips.size() > 1 && isClipSelected(trackId, clipId))
             {
-                // Move all selected clips to new tracks
+                // Move all selected clips - calculate delta from absolute indices
+                int trackDelta = targetTrackIndex - fromIdx;
                 moveSelectedClipsToTrack(trackDelta);
             }
             else
             {
-                // Single clip move
-                int fromIdx = -1;
-                for (int i = 0; i < static_cast<int>(trackLanes.size()); ++i)
-                {
-                    if (trackLanes[static_cast<size_t>(i)].get() == fromLane)
-                    {
-                        fromIdx = i;
-                        break;
-                    }
-                }
-
-                if (fromIdx < 0)
-                    return;
-
-                int toIdx = fromIdx + trackDelta;
-                if (toIdx < 0 || toIdx >= static_cast<int>(trackLanes.size()) || toIdx == fromIdx)
-                    return;
-
-                // Notify parent to move the clip
+                // Single clip move - use absolute target index directly
                 if (onClipMoved)
-                    onClipMoved(clipId, trackId, fromIdx, toIdx);
+                    onClipMoved(clipId, trackId, fromIdx, targetTrackIndex);
             }
+
+            // Update the clip's current track index after move
+            clipComp->currentTrackIndex = targetTrackIndex;
+        };
+
+        // Query track index at screen Y position (for free drag to any track)
+        lane->onQueryTrackAtScreenY = [this](int screenY) -> int
+        {
+            auto localY = getLocalPoint(nullptr, juce::Point<int>(0, screenY)).y;
+            return getTrackIndexAtY(localY);
+        };
+
+        // Set drop target visual feedback
+        lane->onSetDropTargetTrack = [this](int targetTrackIndex)
+        {
+            setDropTargetTrack(targetTrackIndex);
         };
 
         // Wire track context menu actions
@@ -492,15 +577,58 @@ void TimelinePanel::refreshTracks()
                               data.startTime, data.duration, data.sourceStartOffset);
         };
 
+        // Wire fade changed callback
+        lane->onClipFadeChanged = [this](TrackLane* trackLane, ClipComponent* clipComp,
+                                          bool isFadeIn, double duration)
+        {
+            if (onClipFadeChanged)
+                onClipFadeChanged(trackLane->getTrackData().id, clipComp->getClipData().id,
+                                  isFadeIn, duration);
+        };
+
         // Wire drag ghost preview
         lane->onClipDragStart = [this](TrackLane* trackLane, ClipComponent* clipComp)
         {
             isDraggingClip = true;
             ghostClipBounds.clear();
             ghostClipColours.clear();
+            dragStartPositions.clear();
 
             auto trackId = trackLane->getTrackData().id;
             auto clipId = clipComp->getClipData().id;
+
+            // Store starting positions for undo system
+            if (selectedClips.size() > 1 && isClipSelected(trackId, clipId))
+            {
+                // Multi-selection: store all selected clips
+                for (const auto& [selTrackId, selClipId] : selectedClips)
+                {
+                    for (auto& tl : trackLanes)
+                    {
+                        if (tl->getTrackData().id == selTrackId)
+                        {
+                            for (int i = 0; i < tl->getNumChildComponents(); ++i)
+                            {
+                                if (auto* cc = dynamic_cast<ClipComponent*>(tl->getChildComponent(i)))
+                                {
+                                    if (cc->getClipData().id == selClipId)
+                                    {
+                                        dragStartPositions.push_back({selTrackId, selClipId,
+                                                                       cc->getClipData().startTime, 0.0});
+                                        break;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Single clip
+                dragStartPositions.push_back({trackId, clipId, clipComp->getClipData().startTime, 0.0});
+            }
 
             // If this clip is part of a multi-selection, show ghosts for all selected
             if (selectedClips.size() > 1 && isClipSelected(trackId, clipId))
@@ -540,12 +668,59 @@ void TimelinePanel::refreshTracks()
             repaint();
         };
 
-        lane->onClipDragEnd = [this](TrackLane* /*trackLane*/, ClipComponent* /*clipComp*/)
+        lane->onClipDragEnd = [this](TrackLane* trackLane, ClipComponent* /*clipComp*/)
         {
             isDraggingClip = false;
             ghostClipBounds.clear();
             ghostClipColours.clear();
             showSnapLine = false;
+            clearDropTargets();  // Clear visual feedback on drag end
+
+            // Capture final positions and call undo callback
+            if (onClipMoveComplete && !dragStartPositions.empty())
+            {
+                // Update final positions from current clip data
+                for (auto& pos : dragStartPositions)
+                {
+                    for (auto& tl : trackLanes)
+                    {
+                        if (tl->getTrackData().id == pos.trackId)
+                        {
+                            for (int i = 0; i < tl->getNumChildComponents(); ++i)
+                            {
+                                if (auto* cc = dynamic_cast<ClipComponent*>(tl->getChildComponent(i)))
+                                {
+                                    if (cc->getClipData().id == pos.clipId)
+                                    {
+                                        pos.newStartTime = cc->getClipData().startTime;
+                                        break;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // Only call if positions actually changed
+                bool anyChange = false;
+                for (const auto& pos : dragStartPositions)
+                {
+                    if (std::abs(pos.oldStartTime - pos.newStartTime) > 0.001)
+                    {
+                        anyChange = true;
+                        break;
+                    }
+                }
+
+                if (anyChange)
+                    onClipMoveComplete(dragStartPositions);
+            }
+
+            // Detect and apply crossfades on the track where clip was dropped
+            detectAndApplyCrossfades(trackLane);
+
+            dragStartPositions.clear();
             repaint();
         };
 
@@ -653,6 +828,63 @@ void TimelinePanel::clearDropTargets()
         lane->setDropTarget(false);
 }
 
+// DragAndDropTarget implementation (for internal drag from AssetBrowser)
+bool TimelinePanel::isInterestedInDragSource(const SourceDetails& details)
+{
+    auto desc = details.description.toString();
+    // Accept "AudioFile" description or absolute file paths
+    return desc == "AudioFile" || juce::File::isAbsolutePath(desc);
+}
+
+void TimelinePanel::itemDragEnter(const SourceDetails& details)
+{
+    // Show visual feedback when drag enters
+    auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
+    int trackIndex = getTrackIndexAtY(localPos.y);
+    setDropTargetTrack(trackIndex);
+}
+
+void TimelinePanel::itemDragMove(const SourceDetails& details)
+{
+    // Update visual feedback as drag moves
+    auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
+    int trackIndex = getTrackIndexAtY(localPos.y);
+    setDropTargetTrack(trackIndex);
+}
+
+void TimelinePanel::itemDragExit(const SourceDetails& details)
+{
+    juce::ignoreUnused(details);
+    clearDropTargets();
+}
+
+void TimelinePanel::itemDropped(const SourceDetails& details)
+{
+    clearDropTargets();
+
+    auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
+    int trackIndex = getTrackIndexAtY(localPos.y);
+    double dropTime = getTimeAtX(localPos.x);
+
+    juce::File file;
+    auto desc = details.description.toString();
+
+    if (desc == "AudioFile")
+    {
+        // Get file from FileTreeComponent (sourceComponent is WeakReference)
+        if (auto* fileTree = dynamic_cast<juce::FileTreeComponent*>(details.sourceComponent.get()))
+            file = fileTree->getSelectedFile();
+    }
+    else if (juce::File::isAbsolutePath(desc))
+    {
+        // File path passed directly in description
+        file = juce::File(desc);
+    }
+
+    if (file.existsAsFile() && onFileDropped)
+        onFileDropped(file, trackIndex, dropTime);
+}
+
 void TimelinePanel::clearClipSelection()
 {
     // Deselect all clips visually
@@ -680,6 +912,54 @@ void TimelinePanel::selectAllClipsOnTrack(juce::Uuid trackId)
                 {
                     clipComp->setSelected(true);
                     selectedClips.push_back(std::make_pair(trackId, clipComp->getClipData().id));
+                }
+            }
+            break;
+        }
+    }
+}
+
+void TimelinePanel::selectAllClips()
+{
+    clearClipSelection();
+
+    for (auto& lane : trackLanes)
+    {
+        auto trackId = lane->getTrackData().id;
+        for (int i = 0; i < lane->getNumChildComponents(); ++i)
+        {
+            if (auto* clipComp = dynamic_cast<ClipComponent*>(lane->getChildComponent(i)))
+            {
+                clipComp->setSelected(true);
+                selectedClips.push_back(std::make_pair(trackId, clipComp->getClipData().id));
+            }
+        }
+    }
+}
+
+void TimelinePanel::addToSelection(juce::Uuid trackId, juce::Uuid clipId)
+{
+    // Don't add duplicates
+    auto pair = std::make_pair(trackId, clipId);
+    if (std::find(selectedClips.begin(), selectedClips.end(), pair) != selectedClips.end())
+        return;
+
+    selectedClips.push_back(pair);
+
+    // Update visual state
+    for (auto& lane : trackLanes)
+    {
+        if (lane->getTrackData().id == trackId)
+        {
+            for (int i = 0; i < lane->getNumChildComponents(); ++i)
+            {
+                if (auto* clipComp = dynamic_cast<ClipComponent*>(lane->getChildComponent(i)))
+                {
+                    if (clipComp->getClipData().id == clipId)
+                    {
+                        clipComp->setSelected(true);
+                        break;
+                    }
                 }
             }
             break;
@@ -997,6 +1277,64 @@ void TimelinePanel::selectClipsInRect(const juce::Rectangle<int>& rect)
                     selectedClips.push_back(std::make_pair(trackId, clipComp->getClipData().id));
                 }
             }
+        }
+    }
+}
+
+void TimelinePanel::detectAndApplyCrossfades(TrackLane* trackLane)
+{
+    if (trackLane == nullptr)
+        return;
+
+    auto trackId = trackLane->getTrackData().id;
+
+    // Collect all clips on this track
+    std::vector<ClipComponent*> clips;
+    for (int i = 0; i < trackLane->getNumChildComponents(); ++i)
+    {
+        if (auto* clipComp = dynamic_cast<ClipComponent*>(trackLane->getChildComponent(i)))
+            clips.push_back(clipComp);
+    }
+
+    if (clips.size() < 2)
+        return;
+
+    // Sort by start time
+    std::sort(clips.begin(), clips.end(), [](ClipComponent* a, ClipComponent* b) {
+        return a->getClipData().startTime < b->getClipData().startTime;
+    });
+
+    // Check adjacent pairs for overlaps
+    for (size_t i = 0; i < clips.size() - 1; ++i)
+    {
+        auto* clipA = clips[i];
+        auto* clipB = clips[i + 1];
+
+        const auto& dataA = clipA->getClipData();
+        const auto& dataB = clipB->getClipData();
+
+        double endA = dataA.getEndTime();
+        double startB = dataB.startTime;
+        double overlapDuration = endA - startB;
+
+        // Apply crossfade if overlap is between 0 and 2 seconds
+        if (overlapDuration > 0.01 && overlapDuration < 2.0)
+        {
+            // Set fade out on clip A (ending clip)
+            Clip updatedA = dataA;
+            updatedA.fadeOutDuration = overlapDuration;
+            clipA->setClipData(updatedA);
+
+            if (onClipFadeChanged)
+                onClipFadeChanged(trackId, dataA.id, false, overlapDuration);
+
+            // Set fade in on clip B (starting clip)
+            Clip updatedB = dataB;
+            updatedB.fadeInDuration = overlapDuration;
+            clipB->setClipData(updatedB);
+
+            if (onClipFadeChanged)
+                onClipFadeChanged(trackId, dataB.id, true, overlapDuration);
         }
     }
 }

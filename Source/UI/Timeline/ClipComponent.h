@@ -35,10 +35,19 @@ public:
 
     // Callback for drag
     std::function<void(ClipComponent*, double)> onDrag;           // Horizontal drag (delta pixels)
-    std::function<void(ClipComponent*, int)> onDragToNewTrack;    // Vertical drag (target track index)
+    std::function<void(ClipComponent*, int)> onDragToNewTrack;    // Vertical drag (absolute target track index)
     std::function<void(ClipComponent*, bool addToSelection)> onSelect;  // addToSelection = Ctrl+click
     std::function<void(ClipComponent*)> onDragStart;              // Called when drag begins
     std::function<void(ClipComponent*)> onDragEnd;                // Called when drag ends
+
+    // Query callback for absolute track index at screen Y
+    std::function<int(int screenY)> onQueryTrackAtY;
+
+    // Visual feedback for drop target
+    std::function<void(int targetTrackIndex)> onSetDropTarget;
+
+    // Current track index (set by parent TrackLane)
+    int currentTrackIndex = -1;
 
     // Context menu callbacks
     std::function<void(ClipComponent*)> onDelete;
@@ -47,12 +56,25 @@ public:
     // Trim callback: (clip, isLeftEdge, deltaPixels)
     std::function<void(ClipComponent*, bool, double)> onTrim;
 
+    // Fade callback: (clip, isFadeIn, newDuration)
+    std::function<void(ClipComponent*, bool, double)> onFadeChanged;
+
     // Trim edge detection
     enum class EdgeHover { None, Left, Right };
     EdgeHover getHoveredEdge() const { return hoveredEdge; }
 
+    // Fade handle detection
+    enum class FadeHover { None, FadeIn, FadeOut };
+    FadeHover getHoveredFade() const { return hoveredFade; }
+
+    // Pixels per second for time conversion
+    void setPixelsPerSecond(double pps) { pixelsPerSecond = pps; }
+
 private:
-    static constexpr int edgeHitZone = 8;  // pixels from edge to detect trim
+    static constexpr int edgeHitZone = 8;   // pixels from edge to detect trim
+    static constexpr int fadeHandleSize = 8; // size of fade handle circles
+    static constexpr int fadeHitZone = 12;   // hit zone for fade handles
+
     Clip clipData;
     WaveformDisplay waveformDisplay;
     bool selected = false;
@@ -70,7 +92,20 @@ private:
     EdgeHover trimEdge = EdgeHover::None;
     double trimStartValue = 0.0;  // Original start time or duration
 
+    // Fade state
+    FadeHover hoveredFade = FadeHover::None;
+    bool draggingFade = false;
+    FadeHover activeFade = FadeHover::None;
+    double fadeStartValue = 0.0;  // Original fade duration
+
+    // Pixels per second for time calculations
+    double pixelsPerSecond = 100.0;
+
     void updateMouseCursor();
+    void paintFadeOverlays(juce::Graphics& g, const juce::Rectangle<float>& bounds);
+    bool hitTestFadeHandle(const juce::Point<int>& pos, FadeHover& which) const;
+    double pixelsToTime(double pixels) const { return pixels / pixelsPerSecond; }
+    double timeToPixels(double seconds) const { return seconds * pixelsPerSecond; }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipComponent)
 };

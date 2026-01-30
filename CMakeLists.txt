@@ -116,6 +116,7 @@ target_sources(DAWCustom
 
         # Model
         Source/Model/ProjectSerializer.cpp
+        Source/Model/UndoManager.cpp
 
         # Presets
         Source/Presets/PresetManager.cpp

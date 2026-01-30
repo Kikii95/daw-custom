@@ -7,6 +7,7 @@
 #include "Audio/FileIO/AudioFileLoader.h"
 #include "Audio/FileIO/AudioFileExporter.h"
 #include "Model/Project.h"
+#include "Model/UndoManager.h"
 #include "UI/MainLayout.h"
 #include "UI/Timeline/TimelinePanel.h"
 #include "UI/Mixer/MixerPanel.h"
@@ -51,9 +52,13 @@ private:
     void exportMix();
     void addTrack();
 
+    // File import helper
+    void importFileToTrack(const juce::File& file, int trackIndex, double startTime);
+
     // Clipboard operations
     void copySelectedClips();
     void pasteClips();
+    void duplicateSelectedClips();  // Ctrl+D: duplicate multi-selection
 
     void connectCallbacks();
     void updateTitle();
@@ -67,6 +72,9 @@ private:
 
     // Project
     std::unique_ptr<Project> project;
+
+    // Undo/Redo system
+    UndoManager undoManager;
 
     // Clipboard for copy/paste (stores clip data)
     std::vector<Clip> clipboardClips;

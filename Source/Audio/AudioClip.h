@@ -58,6 +58,31 @@ public:
         clipData.sourceStartOffset = newSourceOffset;
     }
 
+    // Update start time only (for ripple edit)
+    void setStartTime(double newStartTime)
+    {
+        juce::ScopedLock sl(lock);
+        clipData.startTime = newStartTime;
+    }
+
+    // Fade parameters
+    void setFadeIn(double duration, FadeType type = FadeType::Linear)
+    {
+        juce::ScopedLock sl(lock);
+        clipData.fadeInDuration = duration;
+        clipData.fadeInType = type;
+    }
+
+    void setFadeOut(double duration, FadeType type = FadeType::Linear)
+    {
+        juce::ScopedLock sl(lock);
+        clipData.fadeOutDuration = duration;
+        clipData.fadeOutType = type;
+    }
+
+    double getFadeInDuration() const { return clipData.fadeInDuration; }
+    double getFadeOutDuration() const { return clipData.fadeOutDuration; }
+
     // Check if position (in samples) falls within this clip
     bool containsPosition(juce::int64 positionInSamples, double projectSampleRate) const;
 
@@ -79,6 +104,10 @@ private:
     bool reversed = false;           // Reverse playback direction
 
     juce::CriticalSection lock;
+
+    // Fade helpers
+    float applyFadeCurve(float t, FadeType type) const;
+    float calculateFadeGain(double localPositionInSeconds) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioClip)
 };

@@ -136,12 +136,50 @@ DAW personnel pour mashups et sound design, avec support VST gratuits.
 
 ---
 
+## Q1 2026 — Drag & Drop Workflow ✅
+
+### Janvier
+- [x] **Sprint F : Drag & Drop Workflow Improvement** ✅
+  - Drag clips to any track (absolute index)
+  - Drag from AssetBrowser to Timeline
+  - Double-click imports to selected track
+  - Visual drop feedback (track highlight)
+
+---
+
+## Q1 2026 — Undo/Redo & Advanced Editing ✅
+
+### Janvier
+- [x] **Sprint G : Undo/Redo & Advanced Editing** ✅
+  - Undo/Redo system (Command Pattern)
+  - UndoableCommand base + 500ms merge window
+  - 5 clip commands (Move, Delete, Add, Trim, MoveToTrack)
+  - Ctrl+Z / Ctrl+Y keyboard shortcuts
+  - Ctrl+D duplicate multi-selection
+  - Ctrl+Shift+A global select all
+  - Snap to clip edge (100ms threshold)
+
+---
+
+## Q1 2026 — Pro Editing Workflow ✅
+
+### Janvier
+- [x] **Sprint H : Pro Editing Workflow** ✅
+  - Fades & Crossfades (fade handles, 4 curve types, auto-crossfade)
+  - Markers system (Shift+M add, Numpad 1-9 jump)
+  - Zoom enhancements (Ctrl+0 fit all, Ctrl+1 zoom selection)
+  - Clip grouping (Ctrl+G group, Ctrl+Shift+G ungroup)
+  - Ripple edit mode (R toggle, delete shifts clips)
+
+---
+
 ## Q2-Q3 2026 — Polish
 
 ### Février-Mars
 - [x] ~~Project save/load (JSON serialization)~~ ✅ Sprint 17
 - [x] ~~Preset system (effects + synths)~~ ✅ Sprint 18
-- [ ] Undo/redo
+- [x] ~~Undo/redo~~ ✅ Sprint G
+- [x] ~~Pro editing workflow~~ ✅ Sprint H
 - [ ] MIDI support
 
 ### Avril-Juin

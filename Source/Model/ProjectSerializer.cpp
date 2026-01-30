@@ -85,6 +85,18 @@ juce::var ProjectSerializer::projectToJson(const Project& project, const AudioMi
     }
     obj->setProperty("tracks", tracksArray);
 
+    // Markers (Sprint H)
+    juce::Array<juce::var> markersArray;
+    for (const auto& marker : project.getMarkers())
+        markersArray.add(markerToJson(marker));
+    obj->setProperty("markers", markersArray);
+
+    // Clip groups (Sprint H)
+    juce::Array<juce::var> groupsArray;
+    for (const auto& group : project.getClipGroups())
+        groupsArray.add(clipGroupToJson(group));
+    obj->setProperty("clipGroups", groupsArray);
+
     return juce::var(obj);
 }
 
@@ -137,6 +149,52 @@ juce::var ProjectSerializer::clipToJson(const Clip& clip)
     obj->setProperty("gain", static_cast<double>(clip.gain));
     obj->setProperty("muted", clip.muted);
     obj->setProperty("colour", clip.colour.toString());
+
+    // Fade in/out (Sprint H)
+    obj->setProperty("fadeInDuration", clip.fadeInDuration);
+    obj->setProperty("fadeOutDuration", clip.fadeOutDuration);
+    obj->setProperty("fadeInType", static_cast<int>(clip.fadeInType));
+    obj->setProperty("fadeOutType", static_cast<int>(clip.fadeOutType));
+
+    // Grouping (future feature)
+    if (!clip.groupId.isNull())
+        obj->setProperty("groupId", clip.groupId.toString());
+    obj->setProperty("locked", clip.locked);
+
+    return juce::var(obj);
+}
+
+juce::var ProjectSerializer::markerToJson(const Marker& marker)
+{
+    auto obj = new juce::DynamicObject();
+
+    obj->setProperty("id", marker.id.toString());
+    obj->setProperty("name", marker.name);
+    obj->setProperty("time", marker.time);
+    obj->setProperty("colour", marker.colour.toString());
+    obj->setProperty("shortcutNumber", marker.shortcutNumber);
+
+    return juce::var(obj);
+}
+
+juce::var ProjectSerializer::clipGroupToJson(const ClipGroup& group)
+{
+    auto obj = new juce::DynamicObject();
+
+    obj->setProperty("id", group.id.toString());
+    obj->setProperty("name", group.name);
+    obj->setProperty("colour", group.colour.toString());
+
+    // Serialize clip references
+    juce::Array<juce::var> clipsArray;
+    for (const auto& [trackId, clipId] : group.clips)
+    {
+        auto clipRef = new juce::DynamicObject();
+        clipRef->setProperty("trackId", trackId.toString());
+        clipRef->setProperty("clipId", clipId.toString());
+        clipsArray.add(juce::var(clipRef));
+    }
+    obj->setProperty("clips", clipsArray);
 
     return juce::var(obj);
 }
@@ -232,6 +290,42 @@ bool ProjectSerializer::loadFromJson(const juce::var& json,
             audioTrack->setTrackData(track);
     }
 
+    // Load markers (Sprint H)
+    auto markersJson = json.getProperty("markers", juce::var());
+    if (markersJson.isArray())
+    {
+        for (const auto& markerJson : *markersJson.getArray())
+        {
+            Marker marker;
+            if (jsonToMarker(markerJson, marker))
+                project.getMarkers().push_back(marker);
+        }
+    }
+
+    // Load clip groups (Sprint H)
+    auto groupsJson = json.getProperty("clipGroups", juce::var());
+    if (groupsJson.isArray())
+    {
+        for (const auto& groupJson : *groupsJson.getArray())
+        {
+            ClipGroup group;
+            if (jsonToClipGroup(groupJson, group))
+            {
+                project.getClipGroups().push_back(group);
+
+                // Update clip groupIds from loaded group
+                for (const auto& [trackId, clipId] : group.clips)
+                {
+                    if (auto* track = project.getTrack(trackId))
+                    {
+                        if (auto* clip = track->getClip(clipId))
+                            clip->groupId = group.id;
+                    }
+                }
+            }
+        }
+    }
+
     project.setModified(false);
     return true;
 }
@@ -325,6 +419,52 @@ bool ProjectSerializer::jsonToClip(const juce::var& json, Clip& clip)
     clip.gain = static_cast<float>(json.getProperty("gain", 1.0));
     clip.muted = json.getProperty("muted", false);
     clip.colour = juce::Colour::fromString(json.getProperty("colour", "ff1e90ff").toString());
+
+    // Fade in/out (Sprint H)
+    clip.fadeInDuration = json.getProperty("fadeInDuration", 0.0);
+    clip.fadeOutDuration = json.getProperty("fadeOutDuration", 0.0);
+    clip.fadeInType = static_cast<FadeType>(static_cast<int>(json.getProperty("fadeInType", 0)));
+    clip.fadeOutType = static_cast<FadeType>(static_cast<int>(json.getProperty("fadeOutType", 0)));
+
+    // Grouping (future feature)
+    auto groupIdStr = json.getProperty("groupId", "").toString();
+    if (groupIdStr.isNotEmpty())
+        clip.groupId = juce::Uuid(groupIdStr);
+    clip.locked = json.getProperty("locked", false);
+
+    return true;
+}
+
+bool ProjectSerializer::jsonToMarker(const juce::var& json, Marker& marker)
+{
+    marker.id = juce::Uuid(json.getProperty("id", "").toString());
+    marker.name = json.getProperty("name", "Marker").toString();
+    marker.time = json.getProperty("time", 0.0);
+    marker.colour = juce::Colour::fromString(json.getProperty("colour", "ffffff00").toString());
+    marker.shortcutNumber = static_cast<int>(json.getProperty("shortcutNumber", -1));
+
+    return true;
+}
+
+bool ProjectSerializer::jsonToClipGroup(const juce::var& json, ClipGroup& group)
+{
+    group.id = juce::Uuid(json.getProperty("id", "").toString());
+    group.name = json.getProperty("name", "Group").toString();
+    group.colour = juce::Colour::fromString(json.getProperty("colour", "ffff8000").toString());
+
+    // Deserialize clip references
+    auto clipsJson = json.getProperty("clips", juce::var());
+    if (clipsJson.isArray())
+    {
+        for (const auto& clipRefJson : *clipsJson.getArray())
+        {
+            auto trackId = juce::Uuid(clipRefJson.getProperty("trackId", "").toString());
+            auto clipId = juce::Uuid(clipRefJson.getProperty("clipId", "").toString());
+
+            if (!trackId.isNull() && !clipId.isNull())
+                group.clips.emplace_back(trackId, clipId);
+        }
+    }
 
     return true;
 }

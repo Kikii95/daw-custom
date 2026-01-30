@@ -6,6 +6,77 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [Unreleased] - Sprint H: Pro Editing Workflow
+
+### Added
+
+**Fades & Crossfades** (Phase 1)
+- Fade In/Out handles on clip edges — draggable with visual triangle overlay
+- 4 fade curve types: Linear, Exponential, S-Curve, Logarithmic
+- DSP fade processing in `AudioClip::getNextAudioBlock()` with gain curves
+- Automatic crossfade detection — overlapping clips get auto-crossfades (up to 2s)
+- `FadeClipCommand` for undo/redo support
+- Fade data persisted in .dawc project files
+
+**Markers System** (Phase 2)
+- `Marker` model with id, name, time, colour, shortcut number (1-9)
+- Visual markers on TimelineRuler — flag shape with vertical line
+- `Shift+M` — Add marker at playhead position
+- `Numpad 1-9` — Jump to marker by shortcut number
+- Click marker to jump, right-click to delete
+- Markers serialized in .dawc project files
+
+**Zoom Enhancements** (Phase 3)
+- `Ctrl+0` — Zoom to fit all clips
+- `Ctrl+1` — Zoom to selection (10% padding)
+- `zoomToTimeRange(start, end)` helper for programmatic zoom
+
+**Clip Grouping** (Phase 4)
+- `ClipGroup` model — groups clips across tracks
+- `Ctrl+G` — Group selected clips
+- `Ctrl+Shift+G` — Ungroup selected clips
+- Groups persisted in .dawc project files
+- Group management in `Project`: createGroup, dissolveGroup, getGroupForClip
+
+**Ripple Edit Mode** (Phase 5)
+- `EditMode` enum: Normal vs Ripple
+- `R` key — Toggle ripple edit mode
+- Deleting clips in ripple mode shifts subsequent clips to fill the gap
+- Full undo support for ripple operations
+
+### Changed
+- `Track::getClip(uuid)` method added for direct clip lookup
+- `AudioClip::setStartTime()` method for ripple edit operations
+- `DeleteClipsCommand` now handles ripple shifts with proper undo
+
+---
+
+## [Unreleased] - Sprint G: Undo/Redo & Advanced Editing
+
+### Added
+- **Undo/Redo System** — Full Command Pattern implementation
+  - `UndoableCommand` base class with 500ms merge window for continuous drags
+  - `UndoManager` with dual-stack (undo/redo), max 100 actions
+  - `MoveClipCommand` — Move clips with multi-selection support
+  - `DeleteClipsCommand` — Delete with full data restoration on undo
+  - `AddClipCommand` — For duplicate, paste, import operations
+  - `TrimClipCommand` — Trim clip edges with merge support
+  - `MoveClipToTrackCommand` — Move clips between tracks
+
+- **Keyboard Shortcuts**
+  - `Ctrl+Z` — Undo
+  - `Ctrl+Y` / `Ctrl+Shift+Z` — Redo
+  - `Ctrl+D` — Duplicate selected clips (multi-selection)
+  - `Ctrl+Shift+A` — Select all clips globally (all tracks)
+
+- **Snap to Clip Edge** — Snaps to start/end of other clips (100ms threshold)
+
+### Changed
+- `snapToGrid()` now checks both grid lines AND clip edges
+- Clip operations (delete, duplicate, move) now use undo system
+
+---
+
 ## [0.1.0] - 2026-01-28
 
 ### Added — Phase 1 MVP
@@ -52,6 +123,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ---
 
 ## [Unreleased]
+
+### Added — Drag & Drop Workflow Improvement (Sprint F)
+
+**Clip Drag Freedom**
+- Drag clips directly to any track (not just adjacent tracks)
+- Absolute track index system replaces incremental delta
+- Query-based track detection via `onQueryTrackAtY` callback
+
+**Browser to Timeline**
+- Drag audio files from AssetBrowser directly to Timeline
+- DragAndDropTarget interface in TimelinePanel
+- Drop position determines track + start time
+- Visual feedback (track highlight) during drag
+
+**Smart Import**
+- Double-click in browser imports to selected track (not Track 1)
+- Import at playhead position
+- `importFileToTrack()` centralized helper method
+
+**Visual Feedback**
+- Consistent drop target highlighting across all drag operations
+- Clear drop targets on drag end
+
+---
 
 ### Added — Advanced Editing & BPM Workflow (Sprint E)
 

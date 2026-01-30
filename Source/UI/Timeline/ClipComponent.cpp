@@ -103,6 +103,118 @@ void ClipComponent::paint(juce::Graphics& g)
             g.fillRoundedRectangle(rightHandle, Theme::cornerRadiusSm);
         }
     }
+
+    // Draw fade overlays
+    paintFadeOverlays(g, bounds);
+}
+
+void ClipComponent::paintFadeOverlays(juce::Graphics& g, const juce::Rectangle<float>& bounds)
+{
+    const float fadeInWidth = static_cast<float>(timeToPixels(clipData.fadeInDuration));
+    const float fadeOutWidth = static_cast<float>(timeToPixels(clipData.fadeOutDuration));
+
+    // Only draw if there are fades
+    if (fadeInWidth < 2.0f && fadeOutWidth < 2.0f && hoveredFade == FadeHover::None)
+        return;
+
+    const float maxHeight = bounds.getHeight() * 0.5f;  // Fade triangles go halfway down
+
+    // Fade In triangle (top-left corner)
+    if (fadeInWidth >= 2.0f || hoveredFade == FadeHover::FadeIn || draggingFade)
+    {
+        float actualWidth = juce::jmax(fadeInWidth, 4.0f);  // Minimum visible width
+
+        juce::Path fadeInPath;
+        fadeInPath.startNewSubPath(bounds.getX(), bounds.getY());
+        fadeInPath.lineTo(bounds.getX() + actualWidth, bounds.getY());
+        fadeInPath.lineTo(bounds.getX(), bounds.getY() + maxHeight);
+        fadeInPath.closeSubPath();
+
+        // Semi-transparent fill
+        g.setColour(juce::Colours::white.withAlpha(0.25f));
+        g.fillPath(fadeInPath);
+
+        // Stroke
+        g.setColour(Theme::Colours::accent().withAlpha(0.8f));
+        g.strokePath(fadeInPath, juce::PathStrokeType(1.5f));
+
+        // Handle circle at apex
+        float handleX = bounds.getX() + actualWidth;
+        float handleY = bounds.getY() + 4;
+        auto handleColor = (hoveredFade == FadeHover::FadeIn || activeFade == FadeHover::FadeIn)
+                             ? Theme::Colours::accent()
+                             : Theme::Colours::accent().withAlpha(0.6f);
+
+        g.setColour(handleColor);
+        g.fillEllipse(handleX - fadeHandleSize / 2, handleY,
+                      static_cast<float>(fadeHandleSize), static_cast<float>(fadeHandleSize));
+
+        // White center dot
+        g.setColour(juce::Colours::white);
+        g.fillEllipse(handleX - 2, handleY + 2, 4, 4);
+    }
+
+    // Fade Out triangle (top-right corner)
+    if (fadeOutWidth >= 2.0f || hoveredFade == FadeHover::FadeOut || draggingFade)
+    {
+        float actualWidth = juce::jmax(fadeOutWidth, 4.0f);
+
+        juce::Path fadeOutPath;
+        fadeOutPath.startNewSubPath(bounds.getRight(), bounds.getY());
+        fadeOutPath.lineTo(bounds.getRight() - actualWidth, bounds.getY());
+        fadeOutPath.lineTo(bounds.getRight(), bounds.getY() + maxHeight);
+        fadeOutPath.closeSubPath();
+
+        // Semi-transparent fill
+        g.setColour(juce::Colours::white.withAlpha(0.25f));
+        g.fillPath(fadeOutPath);
+
+        // Stroke
+        g.setColour(Theme::Colours::accent().withAlpha(0.8f));
+        g.strokePath(fadeOutPath, juce::PathStrokeType(1.5f));
+
+        // Handle circle at apex
+        float handleX = bounds.getRight() - actualWidth;
+        float handleY = bounds.getY() + 4;
+        auto handleColor = (hoveredFade == FadeHover::FadeOut || activeFade == FadeHover::FadeOut)
+                             ? Theme::Colours::accent()
+                             : Theme::Colours::accent().withAlpha(0.6f);
+
+        g.setColour(handleColor);
+        g.fillEllipse(handleX - fadeHandleSize / 2, handleY,
+                      static_cast<float>(fadeHandleSize), static_cast<float>(fadeHandleSize));
+
+        // White center dot
+        g.setColour(juce::Colours::white);
+        g.fillEllipse(handleX - 2, handleY + 2, 4, 4);
+    }
+}
+
+bool ClipComponent::hitTestFadeHandle(const juce::Point<int>& pos, FadeHover& which) const
+{
+    const float fadeInWidth = static_cast<float>(timeToPixels(clipData.fadeInDuration));
+    const float fadeOutWidth = static_cast<float>(timeToPixels(clipData.fadeOutDuration));
+
+    // Fade In handle (top-left area, near the apex)
+    float fadeInHandleX = juce::jmax(fadeInWidth, 4.0f);
+    if (pos.x >= fadeInHandleX - fadeHitZone && pos.x <= fadeInHandleX + fadeHitZone / 2 &&
+        pos.y < 20)  // Top area only
+    {
+        which = FadeHover::FadeIn;
+        return true;
+    }
+
+    // Fade Out handle (top-right area, near the apex)
+    float fadeOutHandleX = static_cast<float>(getWidth()) - juce::jmax(fadeOutWidth, 4.0f);
+    if (pos.x >= fadeOutHandleX - fadeHitZone / 2 && pos.x <= fadeOutHandleX + fadeHitZone &&
+        pos.y < 20)  // Top area only
+    {
+        which = FadeHover::FadeOut;
+        return true;
+    }
+
+    which = FadeHover::None;
+    return false;
 }
 
 void ClipComponent::resized()
@@ -182,11 +294,26 @@ void ClipComponent::mouseDown(const juce::MouseEvent& e)
     dragStartScreen = e.getScreenPosition();
     verticalDragActive = false;
 
+    // Check if we're starting a fade drag operation (priority)
+    if (hoveredFade != FadeHover::None)
+    {
+        draggingFade = true;
+        activeFade = hoveredFade;
+        trimming = false;
+        dragging = false;
+
+        // Store initial fade duration
+        if (activeFade == FadeHover::FadeIn)
+            fadeStartValue = clipData.fadeInDuration;
+        else
+            fadeStartValue = clipData.fadeOutDuration;
+    }
     // Check if we're starting a trim operation
-    if (hoveredEdge != EdgeHover::None)
+    else if (hoveredEdge != EdgeHover::None)
     {
         trimming = true;
         trimEdge = hoveredEdge;
+        draggingFade = false;
         dragging = false;
 
         // Store initial value for trimming
@@ -198,6 +325,7 @@ void ClipComponent::mouseDown(const juce::MouseEvent& e)
     else
     {
         trimming = false;
+        draggingFade = false;
         dragging = true;
 
         // Store Y center of parent track for vertical offset calculation
@@ -213,6 +341,41 @@ void ClipComponent::mouseDown(const juce::MouseEvent& e)
 void ClipComponent::mouseDrag(const juce::MouseEvent& e)
 {
     int deltaX = e.getPosition().x - dragStart.x;
+
+    // Handle fade drag operation
+    if (draggingFade)
+    {
+        if (std::abs(deltaX) > 1)
+        {
+            double deltaTime = pixelsToTime(static_cast<double>(deltaX));
+            double newFadeDuration = 0.0;
+
+            if (activeFade == FadeHover::FadeIn)
+            {
+                // Fade in: dragging right increases, left decreases
+                newFadeDuration = juce::jmax(0.0, clipData.fadeInDuration + deltaTime);
+                // Limit to half clip duration
+                newFadeDuration = juce::jmin(newFadeDuration, clipData.duration * 0.5);
+            }
+            else
+            {
+                // Fade out: dragging left increases, right decreases
+                newFadeDuration = juce::jmax(0.0, clipData.fadeOutDuration - deltaTime);
+                // Limit to half clip duration
+                newFadeDuration = juce::jmin(newFadeDuration, clipData.duration * 0.5);
+            }
+
+            if (onFadeChanged)
+            {
+                bool isFadeIn = (activeFade == FadeHover::FadeIn);
+                onFadeChanged(this, isFadeIn, newFadeDuration);
+            }
+
+            dragStart = e.getPosition();
+            repaint();
+        }
+        return;
+    }
 
     // Handle trim operation
     if (trimming)
@@ -232,20 +395,23 @@ void ClipComponent::mouseDrag(const juce::MouseEvent& e)
 
     int screenY = e.getScreenPosition().y;
 
-    // Detect vertical drag (crossing into another track)
-    constexpr int trackHeight = 80;  // Must match TimelinePanel::trackHeight
-    constexpr int verticalThreshold = trackHeight / 2;
-
-    int verticalOffset = screenY - initialTrackY;
-    int trackDelta = (verticalOffset + (verticalOffset > 0 ? verticalThreshold : -verticalThreshold)) / trackHeight;
-
-    if (trackDelta != 0 && onDragToNewTrack)
+    // Detect vertical drag using absolute track index
+    if (onQueryTrackAtY)
     {
-        // Report track change
-        onDragToNewTrack(this, trackDelta);
-        // Update reference point for next delta
-        initialTrackY += trackDelta * trackHeight;
-        verticalDragActive = true;
+        int targetTrackIndex = onQueryTrackAtY(screenY);
+
+        if (targetTrackIndex >= 0 && targetTrackIndex != currentTrackIndex)
+        {
+            // Report track change with absolute target index
+            if (onDragToNewTrack)
+                onDragToNewTrack(this, targetTrackIndex);
+
+            // Show visual feedback on target track
+            if (onSetDropTarget)
+                onSetDropTarget(targetTrackIndex);
+
+            verticalDragActive = true;
+        }
     }
 
     // Horizontal drag
@@ -258,6 +424,12 @@ void ClipComponent::mouseDrag(const juce::MouseEvent& e)
 
 void ClipComponent::mouseUp(const juce::MouseEvent& /*e*/)
 {
+    if (draggingFade)
+    {
+        draggingFade = false;
+        activeFade = FadeHover::None;
+    }
+
     if (trimming)
     {
         trimming = false;
@@ -282,12 +454,30 @@ void ClipComponent::mouseEnter(const juce::MouseEvent& /*e*/)
 
 void ClipComponent::mouseMove(const juce::MouseEvent& e)
 {
-    auto x = e.getPosition().x;
+    auto pos = e.getPosition();
+
+    // Check fade handles first (priority over trim)
+    FadeHover newFade = FadeHover::None;
+    hitTestFadeHandle(pos, newFade);
+
+    if (newFade != hoveredFade)
+    {
+        hoveredFade = newFade;
+        if (newFade != FadeHover::None)
+        {
+            hoveredEdge = EdgeHover::None;  // Clear trim hover
+            updateMouseCursor();
+            repaint();
+            return;
+        }
+    }
+
+    // Check trim edges
     EdgeHover newEdge = EdgeHover::None;
 
-    if (x < edgeHitZone)
+    if (pos.x < edgeHitZone)
         newEdge = EdgeHover::Left;
-    else if (x > getWidth() - edgeHitZone)
+    else if (pos.x > getWidth() - edgeHitZone)
         newEdge = EdgeHover::Right;
 
     if (newEdge != hoveredEdge)
@@ -302,13 +492,16 @@ void ClipComponent::mouseExit(const juce::MouseEvent& /*e*/)
 {
     hovered = false;
     hoveredEdge = EdgeHover::None;
+    hoveredFade = FadeHover::None;
     updateMouseCursor();
     repaint();
 }
 
 void ClipComponent::updateMouseCursor()
 {
-    if (hoveredEdge != EdgeHover::None)
+    if (hoveredFade != FadeHover::None)
+        setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+    else if (hoveredEdge != EdgeHover::None)
         setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
     else
         setMouseCursor(juce::MouseCursor::NormalCursor);

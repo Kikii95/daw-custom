@@ -194,6 +194,97 @@
 
 ---
 
+## 🎯 Phase 11 : Drag & Drop Workflow ✅
+
+### Sprint F — Clip Drag Freedom ✅
+- [x] Drag clips to any track (absolute index, not delta)
+- [x] onQueryTrackAtY callback for track detection
+- [x] currentTrackIndex tracking in ClipComponent
+
+### Sprint F — Browser to Timeline ✅
+- [x] DragAndDropTarget interface in TimelinePanel
+- [x] isInterestedInDragSource() for "AudioFile" description
+- [x] itemDragMove() with visual feedback
+- [x] itemDropped() with file import
+
+### Sprint F — Smart Import ✅
+- [x] Double-click imports to selected track (not Track 1)
+- [x] Import at playhead position
+- [x] importFileToTrack() centralized helper
+
+### Sprint F — Visual Feedback ✅
+- [x] Drop target highlighting during drag
+- [x] Clear drop targets on drag end
+
+---
+
+## ⏪ Phase 12 : Undo/Redo & Advanced Editing ✅
+
+### Sprint G — Undo/Redo System ✅
+- [x] UndoableCommand base class (merge support 500ms)
+- [x] UndoManager (dual-stack, max 100 actions)
+- [x] MoveClipCommand (multi-selection)
+- [x] DeleteClipsCommand (full restore on undo)
+- [x] AddClipCommand (duplicate, paste, import)
+- [x] TrimClipCommand (merge support)
+- [x] MoveClipToTrackCommand
+
+### Sprint G — Keyboard Shortcuts ✅
+- [x] Ctrl+Z — Undo
+- [x] Ctrl+Y / Ctrl+Shift+Z — Redo
+- [x] Ctrl+D — Duplicate selected clips (multi-selection)
+- [x] Ctrl+Shift+A — Select all clips globally
+
+### Sprint G — Snap Improvements ✅
+- [x] Snap to clip edge (start/end of other clips)
+- [x] 100ms threshold for clip edge snap
+- [x] Grid snap + clip edge snap combined
+
+---
+
+## 🎬 Phase 13 : Pro Editing Workflow ✅
+
+### Sprint H — Fades & Crossfades ✅
+- [x] Fade In/Out duration fields in Clip model
+- [x] FadeType enum (Linear, Exponential, SCurve, Logarithmic)
+- [x] DSP fade processing in AudioClip::getNextAudioBlock()
+- [x] Fade curve functions (applyFadeCurve)
+- [x] Fade handles UI on ClipComponent (draggable triangles)
+- [x] Auto-crossfade detection (overlap ≤ 2s)
+- [x] FadeClipCommand for undo/redo support
+- [x] Fade data serialized in .dawc project files
+
+### Sprint H — Markers System ✅
+- [x] Marker model (id, name, time, colour, shortcut 1-9)
+- [x] Visual markers on TimelineRuler (flag + vertical line)
+- [x] Shift+M — Add marker at playhead
+- [x] Numpad 1-9 — Jump to marker by shortcut
+- [x] Click marker to jump to position
+- [x] Right-click marker to delete
+- [x] Markers serialized in .dawc project files
+
+### Sprint H — Zoom Enhancements ✅
+- [x] Ctrl+0 — Zoom to fit all clips
+- [x] Ctrl+1 — Zoom to selection (10% padding)
+- [x] zoomToTimeRange(start, end) helper method
+
+### Sprint H — Clip Grouping ✅
+- [x] ClipGroup model (id, name, clips, colour)
+- [x] Ctrl+G — Group selected clips
+- [x] Ctrl+Shift+G — Ungroup selected clips
+- [x] Groups persisted in .dawc project files
+- [x] Group management in Project (createGroup, dissolveGroup, getGroupForClip)
+
+### Sprint H — Ripple Edit Mode ✅
+- [x] EditMode enum (Normal, Ripple)
+- [x] R key — Toggle ripple edit mode
+- [x] Delete in ripple mode shifts subsequent clips
+- [x] Full undo support for ripple operations
+- [x] AudioClip::setStartTime() for ripple shifts
+- [x] AudioTrack::updateClipStartTime() for ripple shifts
+
+---
+
 ## 💡 Ideas (Backlog Long Terme)
 
 - [ ] Piano roll / MIDI editor
@@ -202,4 +293,4 @@
 - [ ] Spectrum analyzer
 - [ ] Mastering chain presets
 - [x] ~~Project save/load (JSON)~~ ✅ Sprint 17
-- [ ] Undo/redo system
+- [x] ~~Undo/redo system~~ ✅ Sprint G

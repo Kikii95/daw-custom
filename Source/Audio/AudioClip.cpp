@@ -88,12 +88,17 @@ void AudioClip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFi
         const int idx1 = juce::jmin(idx0 + 1, static_cast<int>(totalLength) - 1);
         const float frac = static_cast<float>(readPosition - idx0);
 
+        // Calculate fade gain based on position within clip
+        double localPositionInSeconds = readPosition / sourceSampleRate;
+        float fadeGain = calculateFadeGain(localPositionInSeconds);
+        float totalGain = gain * fadeGain;
+
         for (int ch = 0; ch < numChannels; ++ch)
         {
             float s0 = audioBuffer->getSample(ch, idx0);
             float s1 = audioBuffer->getSample(ch, idx1);
             float interpolated = s0 + frac * (s1 - s0);  // Linear interpolation
-            outBuffer->addSample(ch, startSample + sample, interpolated * gain);
+            outBuffer->addSample(ch, startSample + sample, interpolated * totalGain);
         }
 
         // Handle mono to stereo
@@ -103,7 +108,7 @@ void AudioClip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFi
             float s1 = audioBuffer->getSample(0, idx1);
             float interpolated = s0 + frac * (s1 - s0);
             for (int ch = 1; ch < outBuffer->getNumChannels(); ++ch)
-                outBuffer->addSample(ch, startSample + sample, interpolated * gain);
+                outBuffer->addSample(ch, startSample + sample, interpolated * totalGain);
         }
 
         readPosition += increment;
@@ -139,4 +144,56 @@ juce::int64 AudioClip::getLocalPosition(juce::int64 globalPosition, double proje
     double globalTime = static_cast<double>(globalPosition) / projectSampleRate;
     double localTime = clipData.getSourcePosition(globalTime);
     return static_cast<juce::int64>(localTime * sourceSampleRate);
+}
+
+float AudioClip::applyFadeCurve(float t, FadeType type) const
+{
+    // Clamp t to [0, 1]
+    t = juce::jlimit(0.0f, 1.0f, t);
+
+    switch (type)
+    {
+        case FadeType::Linear:
+            return t;
+
+        case FadeType::Exponential:
+            // Slow start, fast end (quadratic)
+            return t * t;
+
+        case FadeType::SCurve:
+            // Smooth ease in/out (smoothstep)
+            return t * t * (3.0f - 2.0f * t);
+
+        case FadeType::Logarithmic:
+            // Fast start, slow end (sqrt)
+            return std::sqrt(t);
+
+        default:
+            return t;
+    }
+}
+
+float AudioClip::calculateFadeGain(double localPositionInSeconds) const
+{
+    float fadeGain = 1.0f;
+
+    const double fadeIn = clipData.fadeInDuration;
+    const double fadeOut = clipData.fadeOutDuration;
+    const double duration = clipData.duration;
+
+    // Fade In (at the beginning of the clip)
+    if (fadeIn > 0.0 && localPositionInSeconds < fadeIn)
+    {
+        float t = static_cast<float>(localPositionInSeconds / fadeIn);
+        fadeGain *= applyFadeCurve(t, clipData.fadeInType);
+    }
+
+    // Fade Out (at the end of the clip)
+    if (fadeOut > 0.0 && localPositionInSeconds > (duration - fadeOut))
+    {
+        float t = static_cast<float>((duration - localPositionInSeconds) / fadeOut);
+        fadeGain *= applyFadeCurve(t, clipData.fadeOutType);
+    }
+
+    return fadeGain;
 }

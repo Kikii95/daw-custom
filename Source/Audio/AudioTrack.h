@@ -31,6 +31,12 @@ public:
     void updateClipTiming(const juce::Uuid& clipId, double newStartTime,
                           double newDuration, double newSourceOffset);
 
+    // Update clip fade (for fade handle drags)
+    void updateClipFade(const juce::Uuid& clipId, bool isFadeIn, double duration);
+
+    // Update clip start time (for ripple edit)
+    void updateClipStartTime(const juce::Uuid& clipId, double newStartTime);
+
     // Track properties
     void setVolume(float vol) { volume.store(juce::jmax(0.0f, vol)); }
     float getVolume() const { return volume.load(); }

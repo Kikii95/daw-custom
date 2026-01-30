@@ -187,6 +187,37 @@ void AudioTrack::updateClipTiming(const juce::Uuid& clipId, double newStartTime,
     }
 }
 
+void AudioTrack::updateClipFade(const juce::Uuid& clipId, bool isFadeIn, double duration)
+{
+    juce::ScopedLock sl(clipLock);
+
+    for (auto& clip : clips)
+    {
+        if (clip->getClipData().id == clipId)
+        {
+            if (isFadeIn)
+                clip->setFadeIn(duration);
+            else
+                clip->setFadeOut(duration);
+            break;
+        }
+    }
+}
+
+void AudioTrack::updateClipStartTime(const juce::Uuid& clipId, double newStartTime)
+{
+    juce::ScopedLock sl(clipLock);
+
+    for (auto& clip : clips)
+    {
+        if (clip->getClipData().id == clipId)
+        {
+            clip->setStartTime(newStartTime);
+            break;
+        }
+    }
+}
+
 void AudioTrack::setPosition(juce::int64 positionInSamples)
 {
     position.store(positionInSamples);

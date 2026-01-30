@@ -45,6 +45,27 @@ struct Track
         return false;
     }
 
+    // Get clip by ID
+    Clip* getClip(const juce::Uuid& clipId)
+    {
+        for (auto& clip : clips)
+        {
+            if (clip.id == clipId)
+                return &clip;
+        }
+        return nullptr;
+    }
+
+    const Clip* getClip(const juce::Uuid& clipId) const
+    {
+        for (const auto& clip : clips)
+        {
+            if (clip.id == clipId)
+                return &clip;
+        }
+        return nullptr;
+    }
+
     // Get clip at time
     Clip* getClipAtTime(double time)
     {

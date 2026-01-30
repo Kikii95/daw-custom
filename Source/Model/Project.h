@@ -1,9 +1,18 @@
 #pragma once
 
 #include "Track.h"
+#include "Marker.h"
+#include "ClipGroup.h"
 #include <juce_core/juce_core.h>
 #include <vector>
 #include <memory>
+
+// Edit modes for timeline operations
+enum class EditMode
+{
+    Normal,  // Standard editing: clips don't affect each other
+    Ripple   // Ripple edit: deleting/cutting shifts following clips
+};
 
 class Project
 {
@@ -108,6 +117,144 @@ public:
         return maxDuration;
     }
 
+    // Marker management
+    Marker& addMarker(double time, const juce::String& name = "")
+    {
+        Marker marker(time, name.isEmpty() ? "Marker " + juce::String(markers.size() + 1) : name);
+        markers.push_back(marker);
+
+        // Sort markers by time
+        std::sort(markers.begin(), markers.end(),
+            [](const Marker& a, const Marker& b) { return a.time < b.time; });
+
+        return markers.back();
+    }
+
+    bool removeMarker(const juce::Uuid& markerId)
+    {
+        auto it = std::find_if(markers.begin(), markers.end(),
+            [&markerId](const Marker& m) { return m.id == markerId; });
+
+        if (it != markers.end())
+        {
+            markers.erase(it);
+            return true;
+        }
+        return false;
+    }
+
+    Marker* getMarker(const juce::Uuid& markerId)
+    {
+        for (auto& marker : markers)
+        {
+            if (marker.id == markerId)
+                return &marker;
+        }
+        return nullptr;
+    }
+
+    Marker* getMarkerByShortcut(int shortcutNum)
+    {
+        for (auto& marker : markers)
+        {
+            if (marker.shortcutNumber == shortcutNum)
+                return &marker;
+        }
+        return nullptr;
+    }
+
+    Marker* getNearestMarker(double time, double tolerance = 0.5)
+    {
+        Marker* nearest = nullptr;
+        double minDist = tolerance;
+
+        for (auto& marker : markers)
+        {
+            double dist = std::abs(marker.time - time);
+            if (dist < minDist)
+            {
+                minDist = dist;
+                nearest = &marker;
+            }
+        }
+        return nearest;
+    }
+
+    int getNumMarkers() const { return static_cast<int>(markers.size()); }
+    std::vector<Marker>& getMarkers() { return markers; }
+    const std::vector<Marker>& getMarkers() const { return markers; }
+
+    // Clip group management
+    juce::Uuid createGroup(const std::vector<std::pair<juce::Uuid, juce::Uuid>>& clipList,
+                           const juce::String& groupName = "")
+    {
+        ClipGroup group(groupName.isEmpty()
+            ? "Group " + juce::String(clipGroups.size() + 1)
+            : groupName);
+
+        for (const auto& [trackId, clipId] : clipList)
+        {
+            group.addClip(trackId, clipId);
+
+            // Update clip's groupId
+            if (auto* track = getTrack(trackId))
+            {
+                if (auto* clip = track->getClip(clipId))
+                    clip->groupId = group.id;
+            }
+        }
+
+        clipGroups.push_back(group);
+        return group.id;
+    }
+
+    bool dissolveGroup(const juce::Uuid& groupId)
+    {
+        auto it = std::find_if(clipGroups.begin(), clipGroups.end(),
+            [&groupId](const ClipGroup& g) { return g.id == groupId; });
+
+        if (it != clipGroups.end())
+        {
+            // Clear groupId from all clips in the group
+            for (const auto& [trackId, clipId] : it->clips)
+            {
+                if (auto* track = getTrack(trackId))
+                {
+                    if (auto* clip = track->getClip(clipId))
+                        clip->groupId = juce::Uuid();
+                }
+            }
+
+            clipGroups.erase(it);
+            return true;
+        }
+        return false;
+    }
+
+    ClipGroup* getGroup(const juce::Uuid& groupId)
+    {
+        for (auto& group : clipGroups)
+        {
+            if (group.id == groupId)
+                return &group;
+        }
+        return nullptr;
+    }
+
+    ClipGroup* getGroupForClip(const juce::Uuid& trackId, const juce::Uuid& clipId)
+    {
+        for (auto& group : clipGroups)
+        {
+            if (group.containsClip(trackId, clipId))
+                return &group;
+        }
+        return nullptr;
+    }
+
+    int getNumGroups() const { return static_cast<int>(clipGroups.size()); }
+    std::vector<ClipGroup>& getClipGroups() { return clipGroups; }
+    const std::vector<ClipGroup>& getClipGroups() const { return clipGroups; }
+
     // Modified state
     bool isModified() const { return modified; }
     void setModified(bool state = true) { modified = state; }
@@ -116,6 +263,8 @@ public:
     void clear()
     {
         tracks.clear();
+        markers.clear();
+        clipGroups.clear();
         name = "Untitled Project";
         projectFile = juce::File();
         tempo = 120.0;
@@ -130,6 +279,11 @@ public:
     float getMasterVolume() const { return masterVolume; }
     void setMasterVolume(float vol) { masterVolume = juce::jmax(0.0f, vol); }
 
+    // Edit mode (Normal or Ripple)
+    EditMode getEditMode() const { return editMode; }
+    void setEditMode(EditMode mode) { editMode = mode; }
+    bool isRippleEditEnabled() const { return editMode == EditMode::Ripple; }
+
 private:
     juce::Uuid id;
     juce::String name { "Untitled Project" };
@@ -141,8 +295,11 @@ private:
     int timeSignatureDenom = 4;
 
     float masterVolume = 1.0f;
+    EditMode editMode = EditMode::Normal;
 
     std::vector<Track> tracks;
+    std::vector<Marker> markers;
+    std::vector<ClipGroup> clipGroups;
     bool modified = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Project)

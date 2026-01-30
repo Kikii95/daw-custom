@@ -15,11 +15,19 @@ enum class SnapValue { Off, Bar, Beat, Half, Quarter, Eighth, Sixteenth };
 
 class TimelinePanel : public juce::Component,
                       public juce::Timer,
-                      public TransportController::Listener
+                      public TransportController::Listener,
+                      public juce::DragAndDropTarget
 {
 public:
     TimelinePanel();
     ~TimelinePanel() override;
+
+    // DragAndDropTarget interface (for internal drag from AssetBrowser)
+    bool isInterestedInDragSource(const SourceDetails& details) override;
+    void itemDragEnter(const SourceDetails& details) override;
+    void itemDragMove(const SourceDetails& details) override;
+    void itemDragExit(const SourceDetails& details) override;
+    void itemDropped(const SourceDetails& details) override;
 
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;
@@ -40,6 +48,9 @@ public:
 
     void zoomIn();
     void zoomOut();
+    void zoomToSelection();
+    void zoomToFitAll();
+    void zoomToTimeRange(double startTime, double endTime);
 
     // Scroll position
     void setScrollPosition(double timeInSeconds);
@@ -70,6 +81,17 @@ public:
     std::function<void(juce::Uuid, const juce::String&)> onTrackRenamed;
     std::function<void(juce::Uuid, juce::Uuid, int, int)> onClipMoved;  // (clipId, fromTrackId, fromTrackIdx, toTrackIdx)
     std::function<void(juce::Uuid, juce::Uuid, double)> onClipTimeMoved;  // (trackId, clipId, newStartTime)
+
+    // Struct for undo system - stores position before/after drag
+    struct ClipPositionChange
+    {
+        juce::Uuid trackId;
+        juce::Uuid clipId;
+        double oldStartTime;
+        double newStartTime;
+    };
+    std::function<void(std::vector<ClipPositionChange>)> onClipMoveComplete;  // Called at end of drag for undo
+
     std::function<void(juce::Uuid)> onTrackDelete;
     std::function<void(juce::Uuid, juce::Colour)> onTrackColourChanged;
     std::function<void(juce::Uuid, juce::Uuid)> onClipDelete;      // (trackId, clipId)
@@ -78,11 +100,17 @@ public:
     std::function<void(double)> onPositionClicked;                 // (time)
     std::function<void(juce::Uuid, juce::Uuid, double)> onClipSplit;  // (trackId, clipId, splitTime)
     std::function<void(juce::Uuid, juce::Uuid, double, double, double)> onClipTrimmed;  // (trackId, clipId, newStart, newDuration, newSourceOffset)
+    std::function<void(juce::Uuid, juce::Uuid, bool, double)> onClipFadeChanged;  // (trackId, clipId, isFadeIn, duration)
+
+    // Callback for internal file drops from AssetBrowser
+    std::function<void(const juce::File&, int trackIndex, double time)> onFileDropped;
 
     // Selection
     const std::vector<std::pair<juce::Uuid, juce::Uuid>>& getSelectedClips() const { return selectedClips; }
     void clearClipSelection();
     void selectAllClipsOnTrack(juce::Uuid trackId);
+    void selectAllClips();  // Global: select all clips on all tracks
+    void addToSelection(juce::Uuid trackId, juce::Uuid clipId);  // Add a clip to selection
 
     // Split clip
     void splitSelectedClipsAtPlayhead();
@@ -125,6 +153,7 @@ public:
 
 private:
     void updateVisibleRange();
+    void detectAndApplyCrossfades(TrackLane* trackLane);
 
     TimelineRuler ruler;
     std::vector<std::unique_ptr<TrackLane>> trackLanes;
@@ -170,6 +199,9 @@ private:
     bool isDraggingClip = false;
     std::vector<juce::Rectangle<int>> ghostClipBounds;  // One per selected clip
     std::vector<juce::Colour> ghostClipColours;          // Corresponding colours
+
+    // Drag start positions for undo system
+    std::vector<ClipPositionChange> dragStartPositions;
 
     // Snap visual indicator state
     bool showSnapLine = false;

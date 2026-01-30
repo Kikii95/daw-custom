@@ -44,6 +44,8 @@ private:
     static juce::var trackToJson(const Track& track, const AudioTrack* audioTrack);
     static juce::var clipToJson(const Clip& clip);
     static juce::var effectToJson(const EffectSlot* effect);
+    static juce::var markerToJson(const Marker& marker);
+    static juce::var clipGroupToJson(const ClipGroup& group);
 
     // Deserialization helpers
     static bool loadFromJson(const juce::var& json,
@@ -56,6 +58,8 @@ private:
                             juce::AudioFormatManager& formatManager);
     static bool jsonToClip(const juce::var& json, Clip& clip);
     static bool jsonToEffect(const juce::var& json, EffectChain& chain);
+    static bool jsonToMarker(const juce::var& json, Marker& marker);
+    static bool jsonToClipGroup(const juce::var& json, ClipGroup& group);
 
     // Effect factory
     static std::unique_ptr<EffectSlot> createEffectByType(const juce::String& type);

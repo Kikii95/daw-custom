@@ -1,5 +1,6 @@
 #include "TrackLane.h"
 #include "UI/Theme/AppTheme.h"
+#include <limits>
 
 TrackLane::TrackLane()
 {
@@ -93,6 +94,11 @@ void TrackLane::setTrackData(const Track& track)
 void TrackLane::setPixelsPerSecond(double pps)
 {
     pixelsPerSecond = pps;
+
+    // Propagate to all clip components for fade handle calculations
+    for (auto& clip : clipComponents)
+        clip->setPixelsPerSecond(pps);
+
     layoutClips();
 }
 
@@ -159,10 +165,29 @@ void TrackLane::addClipComponent(const Clip& clipData, juce::AudioThumbnail* thu
         }
     };
 
-    clip->onDragToNewTrack = [this](ClipComponent* c, int trackDelta)
+    // Set current track index for the clip
+    clip->currentTrackIndex = trackIndex;
+
+    clip->onDragToNewTrack = [this](ClipComponent* c, int targetTrackIndex)
     {
+        // Now passes absolute target track index
         if (onClipDraggedToTrack)
-            onClipDraggedToTrack(this, c, trackDelta);
+            onClipDraggedToTrack(this, c, targetTrackIndex);
+    };
+
+    // Query track index at screen Y position
+    clip->onQueryTrackAtY = [this](int screenY) -> int
+    {
+        if (onQueryTrackAtScreenY)
+            return onQueryTrackAtScreenY(screenY);
+        return -1;
+    };
+
+    // Visual feedback for drop target
+    clip->onSetDropTarget = [this](int targetTrackIndex)
+    {
+        if (onSetDropTargetTrack)
+            onSetDropTargetTrack(targetTrackIndex);
     };
 
     clip->onDelete = [this](ClipComponent* c)
@@ -238,6 +263,27 @@ void TrackLane::addClipComponent(const Clip& clipData, juce::AudioThumbnail* thu
             layoutClips();
         }
     };
+
+    clip->onFadeChanged = [this](ClipComponent* c, bool isFadeIn, double newDuration)
+    {
+        if (onClipFadeChanged)
+        {
+            onClipFadeChanged(this, c, isFadeIn, newDuration);
+        }
+        else
+        {
+            // Fallback: direct modification
+            Clip data = c->getClipData();
+            if (isFadeIn)
+                data.fadeInDuration = newDuration;
+            else
+                data.fadeOutDuration = newDuration;
+            c->setClipData(data);
+        }
+    };
+
+    // Set pixels per second for fade handle calculations
+    clip->setPixelsPerSecond(pixelsPerSecond);
 
     addAndMakeVisible(*clip);
     clipComponents.push_back(std::move(clip));
@@ -402,6 +448,41 @@ double TrackLane::snapToGrid(double time) const
     if (!snapEnabled || snapInterval <= 0.0)
         return time;
 
-    // Round to nearest grid line
-    return std::round(time / snapInterval) * snapInterval;
+    double snappedTime = time;
+    double minDist = std::numeric_limits<double>::max();
+    constexpr double clipEdgeSnapThreshold = 0.1;  // 100ms threshold for clip edge snap
+
+    // 1. Grid snap
+    double gridSnapped = std::round(time / snapInterval) * snapInterval;
+    double gridDist = std::abs(time - gridSnapped);
+    if (gridDist < minDist)
+    {
+        minDist = gridDist;
+        snappedTime = gridSnapped;
+    }
+
+    // 2. Clip edge snap (start and end of other clips on this track)
+    for (const auto& clipComp : clipComponents)
+    {
+        const auto& clip = clipComp->getClipData();
+
+        // Snap to clip start
+        double startDist = std::abs(time - clip.startTime);
+        if (startDist < minDist && startDist < clipEdgeSnapThreshold)
+        {
+            minDist = startDist;
+            snappedTime = clip.startTime;
+        }
+
+        // Snap to clip end
+        double clipEndTime = clip.getEndTime();
+        double endDist = std::abs(time - clipEndTime);
+        if (endDist < minDist && endDist < clipEdgeSnapThreshold)
+        {
+            minDist = endDist;
+            snappedTime = clipEndTime;
+        }
+    }
+
+    return snappedTime;
 }

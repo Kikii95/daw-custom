@@ -5,6 +5,15 @@
 #include <juce_graphics/juce_graphics.h>
 #include <memory>
 
+// Fade curve types for audio transitions
+enum class FadeType
+{
+    Linear,       // Straight line
+    Exponential,  // Slow start, fast end (power curve)
+    SCurve,       // Smooth ease in/out
+    Logarithmic   // Fast start, slow end
+};
+
 struct Clip
 {
     juce::Uuid id;
@@ -29,6 +38,20 @@ struct Clip
 
     // Mute state
     bool muted = false;
+
+    // Fade in/out durations (in seconds)
+    double fadeInDuration = 0.0;
+    double fadeOutDuration = 0.0;
+
+    // Fade curve types
+    FadeType fadeInType = FadeType::Linear;
+    FadeType fadeOutType = FadeType::Linear;
+
+    // Grouping (null UUID if not in a group)
+    juce::Uuid groupId;
+
+    // Lock clip from editing
+    bool locked = false;
 
     // End time helper
     double getEndTime() const { return startTime + duration; }

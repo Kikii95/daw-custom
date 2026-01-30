@@ -60,6 +60,13 @@ public:
     std::function<void(TrackLane*, ClipComponent*)> onClipDelete;
     std::function<void(TrackLane*, ClipComponent*)> onClipDuplicate;
     std::function<void(TrackLane*, ClipComponent*, bool isLeftEdge, double deltaPixels)> onClipTrim;
+    std::function<void(TrackLane*, ClipComponent*, bool isFadeIn, double newDuration)> onClipFadeChanged;
+
+    // Query track index at screen Y (used for free drag to any track)
+    std::function<int(int screenY)> onQueryTrackAtScreenY;
+
+    // Set drop target visual feedback
+    std::function<void(int targetTrackIndex)> onSetDropTargetTrack;
 
     // Waveform cache access
     void setWaveformCache(WaveformCache* cache) { waveformCache = cache; }
@@ -73,6 +80,10 @@ public:
 
     // Header width accessor for ruler alignment
     static constexpr int getHeaderWidth() { return headerWidth; }
+
+    // Track index (set by TimelinePanel)
+    void setTrackIndex(int index) { trackIndex = index; }
+    int getTrackIndex() const { return trackIndex; }
 
 private:
     void layoutClips();
@@ -101,6 +112,9 @@ private:
     // Snap settings
     bool snapEnabled = true;
     double snapInterval = 0.25;  // 250ms = 1/16 note at 60 BPM
+
+    // Track index in timeline
+    int trackIndex = -1;
 
     // Track header width
     static constexpr int headerWidth = 120;

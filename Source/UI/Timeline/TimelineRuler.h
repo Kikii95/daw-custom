@@ -2,6 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+class Project;
+
 class TimelineRuler : public juce::Component
 {
 public:
@@ -42,9 +44,14 @@ public:
     void mouseUp(const juce::MouseEvent& e) override;
     void mouseMove(const juce::MouseEvent& e) override;
 
+    // Project for markers
+    void setProject(Project* proj) { project = proj; repaint(); }
+
     // Callbacks
     std::function<void(double, double)> onLoopRangeChanged;
     std::function<void(double)> onPositionClicked;
+    std::function<void(juce::Uuid)> onMarkerClicked;
+    std::function<void(juce::Uuid)> onMarkerDeleted;
 
 private:
     double visibleStart = 0.0;
@@ -73,11 +80,16 @@ private:
     void drawBeatTicks(juce::Graphics& g);
     void drawPlayhead(juce::Graphics& g);
     void drawLoopMarkers(juce::Graphics& g);
+    void drawMarkers(juce::Graphics& g);
 
     // Helpers
     double xToTime(int x) const;
     int timeToX(double time) const;
     DragTarget hitTestLoopMarker(int x) const;
+    juce::Uuid hitTestMarker(int x) const;
+
+    // Project reference for markers
+    Project* project = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TimelineRuler)
 };

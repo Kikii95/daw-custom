@@ -1,5 +1,6 @@
 #include "TimelineRuler.h"
 #include "UI/Theme/AppTheme.h"
+#include "Model/Project.h"
 
 TimelineRuler::TimelineRuler()
 {
@@ -17,6 +18,7 @@ void TimelineRuler::paint(juce::Graphics& g)
         drawTimeTicks(g);
 
     drawLoopMarkers(g);
+    drawMarkers(g);
     drawPlayhead(g);
 
     // Bottom border
@@ -270,6 +272,25 @@ TimelineRuler::DragTarget TimelineRuler::hitTestLoopMarker(int x) const
 
 void TimelineRuler::mouseDown(const juce::MouseEvent& e)
 {
+    // Check for marker click first
+    auto markerId = hitTestMarker(e.x);
+    if (!markerId.isNull())
+    {
+        if (e.mods.isPopupMenu())
+        {
+            // Right-click on marker: delete
+            if (onMarkerDeleted)
+                onMarkerDeleted(markerId);
+        }
+        else
+        {
+            // Left-click on marker: jump to it
+            if (onMarkerClicked)
+                onMarkerClicked(markerId);
+        }
+        return;
+    }
+
     dragTarget = hitTestLoopMarker(e.x);
 
     if (dragTarget != DragTarget::None)
@@ -360,4 +381,71 @@ void TimelineRuler::mouseMove(const juce::MouseEvent& e)
             setMouseCursor(juce::MouseCursor::NormalCursor);
             break;
     }
+}
+
+void TimelineRuler::drawMarkers(juce::Graphics& g)
+{
+    if (project == nullptr)
+        return;
+
+    const auto& markers = project->getMarkers();
+    if (markers.empty())
+        return;
+
+    float height = static_cast<float>(getHeight());
+
+    for (const auto& marker : markers)
+    {
+        // Skip if outside visible range
+        if (marker.time < visibleStart - 1.0 || marker.time > visibleEnd + 1.0)
+            continue;
+
+        int x = timeToX(marker.time);
+
+        // Flag shape (triangle pointing down)
+        juce::Path flag;
+        float fx = static_cast<float>(x);
+        flag.startNewSubPath(fx, 0);
+        flag.lineTo(fx + 12, 0);
+        flag.lineTo(fx + 12, 8);
+        flag.lineTo(fx + 6, 12);
+        flag.lineTo(fx, 8);
+        flag.closeSubPath();
+
+        // Fill flag with marker colour
+        g.setColour(marker.colour);
+        g.fillPath(flag);
+
+        // Draw vertical line through entire ruler height
+        g.setColour(marker.colour.withAlpha(0.6f));
+        g.drawVerticalLine(x, 12.0f, height);
+
+        // Draw shortcut number if assigned
+        if (marker.shortcutNumber >= 1 && marker.shortcutNumber <= 9)
+        {
+            g.setColour(juce::Colours::black);
+            g.setFont(9.0f);
+            g.drawText(juce::String(marker.shortcutNumber),
+                       x + 2, 0, 10, 10,
+                       juce::Justification::centred);
+        }
+    }
+}
+
+juce::Uuid TimelineRuler::hitTestMarker(int x) const
+{
+    if (project == nullptr)
+        return {};
+
+    const auto& markers = project->getMarkers();
+    constexpr int hitTolerance = 12;
+
+    for (const auto& marker : markers)
+    {
+        int markerX = timeToX(marker.time);
+        if (x >= markerX && x <= markerX + hitTolerance)
+            return marker.id;
+    }
+
+    return {};
 }

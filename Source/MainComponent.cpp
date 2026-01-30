@@ -3,6 +3,8 @@
 #include "Audio/Plugins/PluginManager.h"
 #include "UI/Plugins/PluginEditorWindow.h"
 #include "Model/ProjectSerializer.h"
+#include "Model/Commands/ClipCommands.h"
+#include <set>
 
 MainComponent::MainComponent()
 {
@@ -236,6 +238,65 @@ void MainComponent::filesDropped(const juce::StringArray& files, int x, int y)
 
     // Clear drop target highlight
     timelinePanel.clearDropTargets();
+}
+
+void MainComponent::importFileToTrack(const juce::File& file, int trackIndex, double startTime)
+{
+    if (!fileLoader.isFormatSupported(file))
+        return;
+
+    auto result = fileLoader.loadFile(file);
+    if (!result.isValid())
+    {
+        DBG("Failed to load: " + result.error);
+        return;
+    }
+
+    // Ensure we have at least one track
+    if (project->getNumTracks() == 0)
+        addTrack();
+
+    // Clamp track index
+    if (trackIndex < 0)
+        trackIndex = 0;
+    if (trackIndex >= project->getNumTracks())
+        trackIndex = project->getNumTracks() - 1;
+
+    auto* track = project->getTrackByIndex(trackIndex);
+    if (!track)
+        return;
+
+    // Create clip metadata
+    Clip clip;
+    clip.id = juce::Uuid();
+    clip.name = file.getFileNameWithoutExtension();
+    clip.sourceFile = file;
+    clip.startTime = startTime;
+    clip.duration = result.lengthInSeconds;
+    clip.sourceSampleRate = result.sampleRate;
+    clip.colour = track->colour;
+
+    // Add to project track
+    track->addClip(clip);
+
+    // Create AudioClip and add to mixer's AudioTrack
+    if (auto* audioTrack = mixer->getTrack(trackIndex))
+    {
+        auto audioClip = std::make_unique<AudioClip>();
+        audioClip->loadFromBuffer(std::move(result.buffer), result.sampleRate, clip);
+        audioTrack->addClip(std::move(audioClip));
+        audioTrack->setTrackData(*track);
+    }
+
+    // Update duration
+    transport.setDuration(project->getTotalDuration());
+
+    // Refresh UI
+    timelinePanel.refreshTracks();
+    mixerPanel.refreshChannels();
+
+    project->setModified(true);
+    updateTitle();
 }
 
 juce::StringArray MainComponent::getMenuBarNames()
@@ -785,6 +846,27 @@ void MainComponent::connectCallbacks()
         updateTitle();
     };
 
+    // Clip move complete (for undo system) - called at end of drag
+    timelinePanel.onClipMoveComplete = [this](std::vector<TimelinePanel::ClipPositionChange> changes)
+    {
+        // Convert to MoveClipCommand format
+        std::vector<MoveClipCommand::ClipPosition> oldPositions;
+        std::vector<MoveClipCommand::ClipPosition> newPositions;
+
+        for (const auto& change : changes)
+        {
+            oldPositions.push_back({change.trackId, change.clipId, change.oldStartTime});
+            newPositions.push_back({change.trackId, change.clipId, change.newStartTime});
+        }
+
+        // Create and execute command (already applied, so we just record it)
+        auto cmd = std::make_unique<MoveClipCommand>(project.get(), mixer.get(),
+                                                      std::move(oldPositions), std::move(newPositions));
+        // Don't call execute() - positions are already updated
+        // Just add to undo stack
+        undoManager.execute(std::move(cmd));
+    };
+
     // Track delete from context menu
     timelinePanel.onTrackDelete = [this](juce::Uuid trackId)
     {
@@ -821,32 +903,15 @@ void MainComponent::connectCallbacks()
         }
     };
 
-    // Clip delete from context menu
+    // Clip delete from context menu (with undo support)
     timelinePanel.onClipDelete = [this](juce::Uuid trackId, juce::Uuid clipId)
     {
-        auto* track = project->getTrack(trackId);
-        if (track == nullptr)
-            return;
+        std::vector<std::pair<juce::Uuid, juce::Uuid>> clipsToDelete;
+        clipsToDelete.push_back({trackId, clipId});
 
-        // Remove from project
-        track->removeClip(clipId);
-
-        // Remove from audio engine
-        int trackIdx = -1;
-        for (int i = 0; i < project->getNumTracks(); ++i)
-        {
-            if (auto* t = project->getTrackByIndex(i); t && t->id == trackId)
-            {
-                trackIdx = i;
-                break;
-            }
-        }
-
-        if (trackIdx >= 0)
-        {
-            if (auto* audioTrack = mixer->getTrack(trackIdx))
-                audioTrack->removeClip(clipId);
-        }
+        auto cmd = std::make_unique<DeleteClipsCommand>(project.get(), mixer.get(), &fileLoader,
+                                                        std::move(clipsToDelete));
+        undoManager.execute(std::move(cmd));
 
         // Update UI
         timelinePanel.refreshTracks();
@@ -856,7 +921,7 @@ void MainComponent::connectCallbacks()
         updateTitle();
     };
 
-    // Clip duplicate from context menu
+    // Clip duplicate from context menu (with undo support)
     timelinePanel.onClipDuplicate = [this](juce::Uuid trackId, juce::Uuid clipId)
     {
         auto* track = project->getTrack(trackId);
@@ -883,47 +948,10 @@ void MainComponent::connectCallbacks()
         newClip.name = originalClip->name + " (copy)";
         newClip.startTime = originalClip->getEndTime();  // Place after original
 
-        track->addClip(newClip);
-
-        // Duplicate in audio engine
-        int trackIdx = -1;
-        for (int i = 0; i < project->getNumTracks(); ++i)
-        {
-            if (auto* t = project->getTrackByIndex(i); t && t->id == trackId)
-            {
-                trackIdx = i;
-                break;
-            }
-        }
-
-        if (trackIdx >= 0)
-        {
-            if (auto* audioTrack = mixer->getTrack(trackIdx))
-            {
-                // Find original audio clip and duplicate it
-                for (int i = 0; i < audioTrack->getNumClips(); ++i)
-                {
-                    if (auto* ac = audioTrack->getClip(i))
-                    {
-                        if (ac->getClipData().id == clipId)
-                        {
-                            // Reload audio for duplicate
-                            if (newClip.sourceFile.existsAsFile())
-                            {
-                                auto result = fileLoader.loadFile(newClip.sourceFile);
-                                if (result.isValid())
-                                {
-                                    auto newAudioClip = std::make_unique<AudioClip>();
-                                    newAudioClip->loadFromBuffer(std::move(result.buffer), result.sampleRate, newClip);
-                                    audioTrack->addClip(std::move(newAudioClip));
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        // Execute via undo system
+        auto cmd = std::make_unique<AddClipCommand>(project.get(), mixer.get(), &fileLoader,
+                                                     trackId, newClip);
+        undoManager.execute(std::move(cmd));
 
         // Update UI
         timelinePanel.refreshTracks();
@@ -1076,6 +1104,51 @@ void MainComponent::connectCallbacks()
         updateTitle();
     };
 
+    // Clip fade changed callback
+    timelinePanel.onClipFadeChanged = [this](juce::Uuid trackId, juce::Uuid clipId,
+                                              bool isFadeIn, double duration)
+    {
+        auto* track = project->getTrack(trackId);
+        if (track == nullptr)
+            return;
+
+        // Update clip in project model
+        for (auto& clip : track->clips)
+        {
+            if (clip.id == clipId)
+            {
+                if (isFadeIn)
+                    clip.fadeInDuration = duration;
+                else
+                    clip.fadeOutDuration = duration;
+                break;
+            }
+        }
+
+        // Find track index for audio engine
+        int trackIdx = -1;
+        for (int i = 0; i < project->getNumTracks(); ++i)
+        {
+            if (auto* t = project->getTrackByIndex(i); t && t->id == trackId)
+            {
+                trackIdx = i;
+                break;
+            }
+        }
+
+        // Update audio clip fade
+        if (trackIdx >= 0)
+        {
+            if (auto* audioTrack = mixer->getTrack(trackIdx))
+            {
+                audioTrack->updateClipFade(clipId, isFadeIn, duration);
+            }
+        }
+
+        project->setModified(true);
+        updateTitle();
+    };
+
     // Effect rack callbacks
     effectRackPanel.onEffectAdded = [this](juce::Uuid /*trackId*/, int /*index*/)
     {
@@ -1102,8 +1175,24 @@ void MainComponent::connectCallbacks()
     // Asset browser callbacks
     assetBrowser.onFileDoubleClicked = [this](const juce::File& file)
     {
-        // Import file on double-click
-        filesDropped({ file.getFullPathName() }, 0, 0);
+        // Import file to selected track at playhead position
+        int targetTrackIndex = 0;
+        auto selectedTrackId = mixerPanel.getSelectedTrackId();
+
+        if (!selectedTrackId.isNull())
+        {
+            for (int i = 0; i < project->getNumTracks(); ++i)
+            {
+                if (auto* t = project->getTrackByIndex(i); t && t->id == selectedTrackId)
+                {
+                    targetTrackIndex = i;
+                    break;
+                }
+            }
+        }
+
+        double insertTime = transport.getPosition();
+        importFileToTrack(file, targetTrackIndex, insertTime);
     };
 
     // Timeline loop callbacks
@@ -1118,6 +1207,12 @@ void MainComponent::connectCallbacks()
     timelinePanel.onPositionClicked = [this](double time)
     {
         transport.setPosition(time);
+    };
+
+    // Internal drag-drop from AssetBrowser to Timeline
+    timelinePanel.onFileDropped = [this](const juce::File& file, int trackIndex, double time)
+    {
+        importFileToTrack(file, trackIndex, time);
     };
 
     // Tempo synchronization callback
@@ -1354,11 +1449,40 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* /*ori
         return true;
     }
 
-    // Ctrl+Z = Undo (placeholder)
+    // Ctrl+Z = Undo
     if (key == juce::KeyPress('z', juce::ModifierKeys::ctrlModifier, 0))
     {
-        // TODO: Implement undo
-        return false;
+        if (undoManager.canUndo())
+        {
+            undoManager.undo();
+            timelinePanel.refreshTracks();
+            transport.setDuration(project->getTotalDuration());
+            project->setModified(true);
+            updateTitle();
+        }
+        return true;
+    }
+
+    // Ctrl+Y or Ctrl+Shift+Z = Redo
+    if (key == juce::KeyPress('y', juce::ModifierKeys::ctrlModifier, 0) ||
+        key == juce::KeyPress('z', juce::ModifierKeys::ctrlModifier | juce::ModifierKeys::shiftModifier, 0))
+    {
+        if (undoManager.canRedo())
+        {
+            undoManager.redo();
+            timelinePanel.refreshTracks();
+            transport.setDuration(project->getTotalDuration());
+            project->setModified(true);
+            updateTitle();
+        }
+        return true;
+    }
+
+    // Ctrl+Shift+A = Select all clips globally
+    if (key == juce::KeyPress('a', juce::ModifierKeys::ctrlModifier | juce::ModifierKeys::shiftModifier, 0))
+    {
+        timelinePanel.selectAllClips();
+        return true;
     }
 
     // Ctrl+A = Select all clips on selected track
@@ -1381,6 +1505,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* /*ori
         return true;
     }
 
+    // Ctrl+D = Duplicate selected clips
+    if (key == juce::KeyPress('d', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        duplicateSelectedClips();
+        return true;
+    }
+
     // + / = = Zoom in (numpad plus or equals)
     if (key.getKeyCode() == juce::KeyPress::numberPadAdd ||
         key.getTextCharacter() == '=' || key.getTextCharacter() == '+')
@@ -1395,6 +1526,109 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* /*ori
     {
         timelinePanel.zoomOut();
         return true;
+    }
+
+    // Ctrl+0 = Zoom to fit all clips
+    if (key == juce::KeyPress('0', juce::ModifierKeys::ctrlModifier, 0) ||
+        key.getKeyCode() == juce::KeyPress::numberPad0 && key.getModifiers().isCtrlDown())
+    {
+        timelinePanel.zoomToFitAll();
+        return true;
+    }
+
+    // Ctrl+1 = Zoom to selection
+    if (key == juce::KeyPress('1', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        timelinePanel.zoomToSelection();
+        return true;
+    }
+
+    // Ctrl+G = Group selected clips
+    if (key == juce::KeyPress('g', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        const auto& selected = timelinePanel.getSelectedClips();
+        if (selected.size() >= 2)
+        {
+            project->createGroup(selected);
+            project->setModified(true);
+            updateTitle();
+            timelinePanel.repaint();
+        }
+        return true;
+    }
+
+    // Ctrl+Shift+G = Ungroup selected clips
+    if (key == juce::KeyPress('g', juce::ModifierKeys::ctrlModifier | juce::ModifierKeys::shiftModifier, 0))
+    {
+        const auto& selected = timelinePanel.getSelectedClips();
+        if (!selected.empty())
+        {
+            // Find and dissolve groups for selected clips
+            std::set<juce::Uuid> groupsToDissolve;
+            for (const auto& [trackId, clipId] : selected)
+            {
+                if (auto* group = project->getGroupForClip(trackId, clipId))
+                    groupsToDissolve.insert(group->id);
+            }
+
+            for (const auto& groupId : groupsToDissolve)
+                project->dissolveGroup(groupId);
+
+            if (!groupsToDissolve.empty())
+            {
+                project->setModified(true);
+                updateTitle();
+                timelinePanel.repaint();
+            }
+        }
+        return true;
+    }
+
+    // R = Toggle Ripple Edit mode
+    if (key.getTextCharacter() == 'r' && !key.getModifiers().isAnyModifierKeyDown())
+    {
+        auto currentMode = project->getEditMode();
+        auto newMode = (currentMode == EditMode::Normal) ? EditMode::Ripple : EditMode::Normal;
+        project->setEditMode(newMode);
+
+        // Show notification
+        auto message = newMode == EditMode::Ripple
+            ? "Ripple Edit: ON"
+            : "Ripple Edit: OFF";
+        DBG(message);  // TODO: Add visual indicator in transport bar
+        return true;
+    }
+
+    // Shift+M = Add marker at playhead position
+    if (key == juce::KeyPress('m', juce::ModifierKeys::shiftModifier, 0))
+    {
+        double playheadTime = transport.getPosition();
+        project->addMarker(playheadTime);
+        timelinePanel.repaint();
+        project->setModified(true);
+        updateTitle();
+        return true;
+    }
+
+    // Numpad 1-9 = Jump to marker with that shortcut number
+    int numpadKey = -1;
+    if (key.getKeyCode() == juce::KeyPress::numberPad1) numpadKey = 1;
+    else if (key.getKeyCode() == juce::KeyPress::numberPad2) numpadKey = 2;
+    else if (key.getKeyCode() == juce::KeyPress::numberPad3) numpadKey = 3;
+    else if (key.getKeyCode() == juce::KeyPress::numberPad4) numpadKey = 4;
+    else if (key.getKeyCode() == juce::KeyPress::numberPad5) numpadKey = 5;
+    else if (key.getKeyCode() == juce::KeyPress::numberPad6) numpadKey = 6;
+    else if (key.getKeyCode() == juce::KeyPress::numberPad7) numpadKey = 7;
+    else if (key.getKeyCode() == juce::KeyPress::numberPad8) numpadKey = 8;
+    else if (key.getKeyCode() == juce::KeyPress::numberPad9) numpadKey = 9;
+
+    if (numpadKey > 0)
+    {
+        if (auto* marker = project->getMarkerByShortcut(numpadKey))
+        {
+            transport.setPosition(marker->time);
+            return true;
+        }
     }
 
     return false;
@@ -1523,6 +1757,75 @@ void MainComponent::pasteClips()
     // Update UI
     timelinePanel.refreshTracks();
     transport.setDuration(project->getTotalDuration());
+
+    project->setModified(true);
+    updateTitle();
+}
+
+void MainComponent::duplicateSelectedClips()
+{
+    const auto& selected = timelinePanel.getSelectedClips();
+    if (selected.empty())
+        return;
+
+    // Find max end time and earliest start for positioning
+    double maxEndTime = 0.0;
+    double earliestStart = std::numeric_limits<double>::max();
+
+    for (const auto& [trackId, clipId] : selected)
+    {
+        if (auto* track = project->getTrack(trackId))
+        {
+            for (const auto& clip : track->clips)
+            {
+                if (clip.id == clipId)
+                {
+                    maxEndTime = juce::jmax(maxEndTime, clip.getEndTime());
+                    earliestStart = juce::jmin(earliestStart, clip.startTime);
+                }
+            }
+        }
+    }
+
+    // Clear selection before adding new clips
+    timelinePanel.clearClipSelection();
+
+    // Duplicate each selected clip
+    std::vector<std::pair<juce::Uuid, juce::Uuid>> newClips;
+
+    for (const auto& [trackId, clipId] : selected)
+    {
+        if (auto* track = project->getTrack(trackId))
+        {
+            for (const auto& original : track->clips)
+            {
+                if (original.id == clipId)
+                {
+                    // Create duplicate clip
+                    Clip newClip = original;
+                    newClip.id = juce::Uuid();
+                    newClip.startTime = maxEndTime + (original.startTime - earliestStart);
+                    newClip.name = original.name + " (copy)";
+
+                    // Execute via undo system
+                    auto cmd = std::make_unique<AddClipCommand>(project.get(), mixer.get(), &fileLoader,
+                                                                 trackId, newClip);
+                    undoManager.execute(std::move(cmd));
+
+                    newClips.push_back({trackId, newClip.id});
+                    break;
+                }
+            }
+        }
+    }
+
+    // Update UI
+    timelinePanel.refreshTracks();
+    transport.setDuration(project->getTotalDuration());
+
+    // Select the new clips
+    for (const auto& [trackId, clipId] : newClips)
+        timelinePanel.addToSelection(trackId, clipId);
 
     project->setModified(true);
     updateTitle();
