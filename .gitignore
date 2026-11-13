@@ -38,3 +38,6 @@ external/JUCE/
 
 # Reference code (don't commit)
 _reference/
+
+# Fiches pour Claude : privées (sauvegardées dans claude-config), jamais publiées
+.claude/
